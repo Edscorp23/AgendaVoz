@@ -1,0 +1,11 @@
+<resources>
+    <color name="fondo">#F4F6FB</color>
+    <color name="tarjeta">#FFFFFF</color>
+    <color name="borde">#E3E7F0</color>
+    <color name="primario">#2F55D4</color>
+    <color name="primario_oscuro">#1E3A9E</color>
+    <color name="texto">#1B1F2B</color>
+    <color name="secundario">#5E6578</color>
+    <color name="peligro">#C62828</color>
+    <color name="ic_launcher_background">#2F55D4</color>
+</resources>

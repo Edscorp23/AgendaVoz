@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fondo"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Ajustes" />
+
+        <!-- Recordatorios -->
+        <TextView
+            style="@style/Seccion"
+            android:text="RECORDATORIOS" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="Avisar antes (minutos, 0 = solo a la hora exacta)" />
+
+        <EditText
+            android:id="@+id/campoAviso"
+            style="@style/Campo"
+            android:inputType="number" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="Idioma del dictado (es-PE, es-MX, es-ES…)" />
+
+        <EditText
+            android:id="@+id/campoIdioma"
+            style="@style/Campo"
+            android:inputType="text" />
+
+        <!-- IA -->
+        <TextView
+            style="@style/Seccion"
+            android:text="IA GRATUITA (OPCIONAL, CON INTERNET)" />
+
+        <TextView
+            style="@style/Ayuda"
+            android:text="Pega la URL de tu Apps Script (termina en /exec) y el token que pusiste allí. Sin esto, la app usa su intérprete local, que funciona sin internet." />
+
+        <CheckBox
+            android:id="@+id/checkIa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Usar IA cuando haya internet"
+            android:textColor="@color/texto" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="URL del Apps Script" />
+
+        <EditText
+            android:id="@+id/campoUrl"
+            style="@style/Campo"
+            android:hint="https://script.google.com/macros/s/…/exec"
+            android:inputType="textUri" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="Token" />
+
+        <EditText
+            android:id="@+id/campoToken"
+            style="@style/Campo"
+            android:inputType="textPassword" />
+
+        <Button
+            android:id="@+id/botonGuardar"
+            style="@style/BotonPrincipal"
+            android:text="Guardar ajustes" />
+
+        <Button
+            android:id="@+id/botonProbarIa"
+            style="@style/BotonSecundario"
+            android:text="Probar IA con «reunión con Carlos mañana a las 3»" />
+
+        <TextView
+            android:id="@+id/resultadoIa"
+            style="@style/Ayuda"
+            android:textIsSelectable="true" />
+
+        <!-- Batería / Honor -->
+        <TextView
+            style="@style/Seccion"
+            android:text="QUE LAS ALARMAS SIEMPRE SUENEN" />
+
+        <TextView
+            style="@style/Ayuda"
+            android:text="En Honor/Huawei: Ajustes › Batería › Inicio de aplicaciones › Agenda Voz › desactiva «Gestionar automáticamente» y activa las 3 opciones. Luego prueba una alarma en 1 minuto con la app cerrada." />
+
+        <TextView
+            android:id="@+id/estadoPermisos"
+            style="@style/Ayuda"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/texto" />
+
+        <Button
+            android:id="@+id/botonInicioAuto"
+            style="@style/BotonSecundario"
+            android:text="Abrir «Inicio de aplicaciones» (Honor)" />
+
+        <Button
+            android:id="@+id/botonBateria"
+            style="@style/BotonSecundario"
+            android:text="Quitar optimización de batería" />
+
+        <Button
+            android:id="@+id/botonNotificaciones"
+            style="@style/BotonSecundario"
+            android:text="Ajustes de notificaciones" />
+
+        <Button
+            android:id="@+id/botonExactas"
+            style="@style/BotonSecundario"
+            android:text="Permitir alarmas exactas" />
+
+        <Button
+            android:id="@+id/botonProbarAlarma"
+            style="@style/BotonPrincipal"
+            android:text="Probar alarma en 1 minuto" />
+    </LinearLayout>
+</ScrollView>
