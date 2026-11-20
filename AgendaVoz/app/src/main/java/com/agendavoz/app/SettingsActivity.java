@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 
 public class SettingsActivity extends Activity {
 
-    private EditText campoAviso, campoIdioma, campoUrl, campoToken;
+    private EditText campoAviso, campoIdioma, campoUrl, campoToken, campoRepetir, campoInsistir, campoReavisar;
     private CheckBox checkIa;
     private TextView resultadoIa, estadoPermisos;
 
@@ -35,6 +35,9 @@ public class SettingsActivity extends Activity {
         campoIdioma = findViewById(R.id.campoIdioma);
         campoUrl = findViewById(R.id.campoUrl);
         campoToken = findViewById(R.id.campoToken);
+        campoRepetir = findViewById(R.id.campoRepetir);
+        campoInsistir = findViewById(R.id.campoInsistir);
+        campoReavisar = findViewById(R.id.campoReavisar);
         checkIa = findViewById(R.id.checkIa);
         resultadoIa = findViewById(R.id.resultadoIa);
         estadoPermisos = findViewById(R.id.estadoPermisos);
@@ -43,6 +46,9 @@ public class SettingsActivity extends Activity {
         campoIdioma.setText(Prefs.idioma(this));
         campoUrl.setText(Prefs.proxyUrl(this));
         campoToken.setText(Prefs.proxyToken(this));
+        campoRepetir.setText(String.valueOf(Prefs.repetirSeg(this)));
+        campoInsistir.setText(String.valueOf(Prefs.insistirMin(this)));
+        campoReavisar.setText(String.valueOf(Prefs.reavisarMin(this)));
         checkIa.setChecked(getSharedPreferences("agenda_voz", MODE_PRIVATE).getBoolean("ia_activa", true));
 
         Button guardar = findViewById(R.id.botonGuardar);
@@ -62,7 +68,19 @@ public class SettingsActivity extends Activity {
         findViewById(R.id.botonProbarAlarma).setOnClickListener(v -> {
             Alarmas.crearCanal(this);
             Alarmas.probarEnUnMinuto(this);
-            Toast.makeText(this, "Alarma de prueba en 1 minuto. Cierra la app y espera.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Recordatorio de prueba en 1 minuto. Bloquea el teléfono y espera.", Toast.LENGTH_LONG).show();
+        });
+
+        findViewById(R.id.botonProbarVoz).setOnClickListener(v -> {
+            guardar();
+            Intent s = new Intent(this, RecordatorioService.class);
+            s.setAction(RecordatorioService.ACCION_INICIAR);
+            s.putExtra(Alarmas.EXTRA_ID, Alarmas.ID_PRUEBA);
+            s.putExtra(Alarmas.EXTRA_PREVIO, false);
+            startForegroundService(s);
+            Intent pantalla = new Intent(this, AlarmaActivity.class);
+            pantalla.putExtra(Alarmas.EXTRA_ID, Alarmas.ID_PRUEBA);
+            startActivity(pantalla);
         });
     }
 
@@ -86,6 +104,15 @@ public class SettingsActivity extends Activity {
         }
         Prefs.guardar(this, campoUrl.getText().toString(), campoToken.getText().toString(),
                 checkIa.isChecked(), aviso, campoIdioma.getText().toString());
+        Prefs.guardarRecordatorio(this, entero(campoRepetir, 30), entero(campoInsistir, 3), entero(campoReavisar, 10));
+    }
+
+    private static int entero(EditText campo, int porDefecto) {
+        try {
+            return Integer.parseInt(campo.getText().toString().trim());
+        } catch (Exception e) {
+            return porDefecto;
+        }
     }
 
     private void actualizarEstado() {

@@ -470,7 +470,9 @@ public class MainActivity extends Activity {
         Alarmas.programar(this, e);
         pendiente = null;
         refrescar();
-        String aviso = e.avisoMin > 0 ? " Te aviso " + e.avisoMin + " minutos antes y a la hora." : " Te aviso a la hora.";
+        String aviso = e.avisoMin > 0
+                ? " Te aviso " + e.avisoMin + " minutos antes, y a la hora te lo repetiré hasta que lo marques como hecho."
+                : " A la hora te lo repetiré hasta que lo marques como hecho.";
         hablar("Listo. Guardé " + describir(r) + "." + aviso, false);
         if (!Alarmas.puedeExactas(this)) {
             Toast.makeText(this, "Activa «alarmas exactas» en Ajustes para que suene puntual.", Toast.LENGTH_LONG).show();
@@ -545,6 +547,7 @@ public class MainActivity extends Activity {
         estado = NORMAL;
         if (eventoObjetivo == null) return;
         Alarmas.cancelar(this, eventoObjetivo.id);
+        Acciones.quitarAviso(this, eventoObjetivo.id);
         DbHelper.get(this).eliminar(eventoObjetivo.id);
         eventoObjetivo = null;
         refrescar();
@@ -596,6 +599,7 @@ public class MainActivity extends Activity {
         modoCambio = false;
         if (eventoObjetivo == null || nuevaFechaHora == null) return;
         eventoObjetivo.setFechaHora(nuevaFechaHora);
+        eventoObjetivo.pospuesto = 0;
         DbHelper.get(this).actualizar(eventoObjetivo);
         Alarmas.programar(this, eventoObjetivo);
         String d = describir(eventoObjetivo);
@@ -667,13 +671,12 @@ public class MainActivity extends Activity {
                     DbHelper db = DbHelper.get(this);
                     switch (op) {
                         case "Marcar como hecha":
-                            e.hecho = true;
-                            db.actualizar(e);
-                            Alarmas.cancelar(this, e.id);
+                            Acciones.hecho(this, e.id);
                             refrescar();
                             break;
                         case "Volver a pendientes":
                             e.hecho = false;
+                            e.pospuesto = 0;
                             db.actualizar(e);
                             Alarmas.programar(this, e);
                             refrescar();
@@ -689,6 +692,7 @@ public class MainActivity extends Activity {
                                     .setMessage("¿Eliminar «" + e.titulo + "»?")
                                     .setPositiveButton("Eliminar", (d2, w2) -> {
                                         Alarmas.cancelar(this, e.id);
+                                        Acciones.quitarAviso(this, e.id);
                                         db.eliminar(e.id);
                                         refrescar();
                                     })
@@ -708,6 +712,7 @@ public class MainActivity extends Activity {
                 new TimePickerDialog(this, (tp, h, min) -> {
                     LocalDateTime nueva = LocalDateTime.of(y, m + 1, d, h, min);
                     e.setFechaHora(nueva);
+                    e.pospuesto = 0;
                     DbHelper.get(this).actualizar(e);
                     Alarmas.programar(this, e);
                     refrescar();
@@ -762,7 +767,13 @@ public class MainActivity extends Activity {
             titulo.setText(e.titulo);
             String det = e.esReunion() ? "Reunión" : "Tarea";
             if (!e.participantes.isEmpty()) det += " · con " + e.participantes;
-            boolean vencida = !e.hecho && e.cuando < System.currentTimeMillis();
+            long ahoraMs = System.currentTimeMillis();
+            boolean pospuesta = !e.hecho && e.pospuesto > ahoraMs;
+            boolean vencida = !e.hecho && e.cuando < ahoraMs && !pospuesta;
+            if (pospuesta) {
+                det += " · pospuesta hasta " + Formato.hora(java.time.LocalDateTime.ofInstant(
+                        java.time.Instant.ofEpochMilli(e.pospuesto), ZoneId.systemDefault()).toLocalTime());
+            }
             if (vencida) det += " · vencida";
             if (e.hecho) det += " · hecha";
             detalle.setText(det);

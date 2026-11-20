@@ -13,7 +13,7 @@ import java.util.List;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB = "agenda.db";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final String T = "eventos";
 
     private static DbHelper instancia;
@@ -36,13 +36,16 @@ public class DbHelper extends SQLiteOpenHelper {
                 + "participantes TEXT,"
                 + "cuando INTEGER NOT NULL,"
                 + "aviso_min INTEGER NOT NULL DEFAULT 10,"
-                + "hecho INTEGER NOT NULL DEFAULT 0)");
+                + "hecho INTEGER NOT NULL DEFAULT 0,"
+                + "pospuesto INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE INDEX idx_cuando ON " + T + "(cuando)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldV, int newV) {
-        // Versión 1: sin migraciones todavía.
+        if (oldV < 2) {
+            db.execSQL("ALTER TABLE " + T + " ADD COLUMN pospuesto INTEGER NOT NULL DEFAULT 0");
+        }
     }
 
     private ContentValues valores(Evento e) {
@@ -53,6 +56,7 @@ public class DbHelper extends SQLiteOpenHelper {
         cv.put("cuando", e.cuando);
         cv.put("aviso_min", e.avisoMin);
         cv.put("hecho", e.hecho ? 1 : 0);
+        cv.put("pospuesto", e.pospuesto);
         return cv;
     }
 
@@ -79,6 +83,12 @@ public class DbHelper extends SQLiteOpenHelper {
         return consulta("hecho=0 AND cuando>=?", new String[]{String.valueOf(desde)}, "cuando ASC");
     }
 
+    /** Pendientes cuya alarma (original o pospuesta) todavía no ha llegado. */
+    public List<Evento> pendientesConAlarmaFutura(long ahora) {
+        return consulta("hecho=0 AND (cuando>=? OR pospuesto>=?)",
+                new String[]{String.valueOf(ahora), String.valueOf(ahora)}, "cuando ASC");
+    }
+
     /** Pendientes entre dos instantes [ini, fin). */
     public List<Evento> pendientesEntre(long ini, long fin) {
         return consulta("hecho=0 AND cuando>=? AND cuando<?",
@@ -103,6 +113,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 e.cuando = c.getLong(c.getColumnIndexOrThrow("cuando"));
                 e.avisoMin = c.getInt(c.getColumnIndexOrThrow("aviso_min"));
                 e.hecho = c.getInt(c.getColumnIndexOrThrow("hecho")) == 1;
+                e.pospuesto = c.getLong(c.getColumnIndexOrThrow("pospuesto"));
                 lista.add(e);
             }
         } finally {

@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Recordatorio hablado: servicio en primer plano que usa la voz, pantalla sobre el bloqueo -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Android 11+: declarar qué servicios externos usamos (dictado y voz) -->
     <queries>
@@ -46,8 +51,27 @@
             android:label="Ajustes"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".AlarmaActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/TemaAlarma"
+            android:turnScreenOn="true" />
+
+        <service
+            android:name=".RecordatorioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <receiver
             android:name=".AlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".AccionReceiver"
             android:exported="false" />
 
         <receiver

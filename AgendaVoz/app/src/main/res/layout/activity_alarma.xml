@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/primario_oscuro"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:contentDescription="Recordatorio"
+            android:src="@drawable/ic_notificacion" />
+
+        <TextView
+            android:id="@+id/alarmaTipo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/alarmaTitulo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/alarmaDetalle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#E6FFFFFF"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/alarmaEstado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textColor="#B3FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="italic" />
+
+        <Button
+            android:id="@+id/btnHecho"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="28dp"
+            android:backgroundTint="#2E7D32"
+            android:text="✔  Hecho"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:gravity="center"
+            android:text="Posponer"
+            android:textColor="#CCFFFFFF"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnPos5"
+                style="@style/BotonPosponer"
+                android:text="5 min" />
+
+            <Button
+                android:id="@+id/btnPos10"
+                style="@style/BotonPosponer"
+                android:text="10 min" />
+
+            <Button
+                android:id="@+id/btnPos30"
+                style="@style/BotonPosponer"
+                android:text="30 min" />
+
+            <Button
+                android:id="@+id/btnPos60"
+                style="@style/BotonPosponer"
+                android:text="1 hora" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnVoz"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="18dp"
+            android:backgroundTint="#FFFFFF"
+            android:text="🎤  Responder por voz"
+            android:textAllCaps="false"
+            android:textColor="@color/primario_oscuro"
+            android:textSize="17sp" />
+
+        <Button
+            android:id="@+id/btnSilenciar"
+            style="@android:style/Widget.Material.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Silenciar (dejar pendiente)"
+            android:textAllCaps="false"
+            android:textColor="#E6FFFFFF"
+            android:textSize="15sp" />
+    </LinearLayout>
+</ScrollView>

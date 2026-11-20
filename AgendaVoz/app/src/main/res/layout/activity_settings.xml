@@ -31,6 +31,38 @@
 
         <TextView
             style="@style/Etiqueta"
+            android:text="Repetir el recordatorio hablado cada (segundos)" />
+
+        <EditText
+            android:id="@+id/campoRepetir"
+            style="@style/Campo"
+            android:inputType="number" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="Insistir hablando durante (minutos)" />
+
+        <EditText
+            android:id="@+id/campoInsistir"
+            style="@style/Campo"
+            android:inputType="number" />
+
+        <TextView
+            style="@style/Etiqueta"
+            android:text="Si no respondo, volver a decirlo en (minutos, 0 = no)" />
+
+        <EditText
+            android:id="@+id/campoReavisar"
+            style="@style/Campo"
+            android:inputType="number" />
+
+        <Button
+            android:id="@+id/botonProbarVoz"
+            style="@style/BotonSecundario"
+            android:text="Escuchar un recordatorio de prueba ahora" />
+
+        <TextView
+            style="@style/Etiqueta"
             android:text="Idioma del dictado (es-PE, es-MX, es-ES…)" />
 
         <EditText
@@ -127,6 +159,6 @@
         <Button
             android:id="@+id/botonProbarAlarma"
             style="@style/BotonPrincipal"
-            android:text="Probar alarma en 1 minuto" />
+            android:text="Probar recordatorio hablado en 1 minuto" />
     </LinearLayout>
 </ScrollView>

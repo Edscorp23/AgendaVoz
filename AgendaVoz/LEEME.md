@@ -56,6 +56,23 @@ Para dictar se usa el reconocimiento de voz de Google. Si el micrófono no abre 
 
 Toca cualquier elemento de la lista para marcarlo como hecho, cambiar fecha y hora, cambiar el título o eliminarlo.
 
+## Cuando llega la hora: recordatorio hablado
+
+En vez de un sonido, la app **dice en voz alta** la reunión o tarea («Es hora de tu reunión: Reunión con Carlos…») y la **repite** hasta que respondas. Aparece una pantalla grande, incluso con el teléfono bloqueado, con estas opciones:
+
+- **Hecho**: la marca como realizada y deja de hablar.
+- **Posponer 5 min / 10 min / 30 min / 1 hora**: calla y te lo vuelve a decir más tarde.
+- **Responder por voz**: di «listo», «posponer 15 minutos», «en media hora» o «silencio».
+- **Silenciar**: deja de hablar pero queda pendiente en la barra de notificaciones.
+
+Los mismos botones (Hecho, Posponer 10 min, Silenciar) aparecen en la notificación.
+
+Si no respondes, insiste unos minutos y luego se pospone sola y vuelve a avisarte. En **Ajustes** puedes cambiar cada cuánto repite (30 s), cuánto tiempo insiste (3 min) y en cuánto vuelve a avisar (10 min). El botón **«Escuchar un recordatorio de prueba ahora»** te deja oír cómo suena.
+
+El aviso previo (por ejemplo, 10 minutos antes) se dice **una sola vez**.
+
+La voz usa el volumen de **alarma** del teléfono. Si no se oye, sube ese volumen. Si el teléfono no tiene voz en español instalada, la app usa el timbre de alarma como respaldo: instala la voz en *Ajustes del teléfono › Accesibilidad › Salida de texto a voz*.
+
 ## 5. IA gratuita (opcional, con internet)
 
 1. Entra a **script.google.com › Nuevo proyecto**. Borra lo que haya y pega todo el archivo `apps-script/Codigo.gs`. Guarda.

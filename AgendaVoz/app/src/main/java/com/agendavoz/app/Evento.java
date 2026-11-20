@@ -16,6 +16,7 @@ public class Evento {
     public long cuando;                 // milisegundos (epoch)
     public int avisoMin = 10;
     public boolean hecho;
+    public long pospuesto;              // si se pospuso: nuevo momento del aviso (epoch ms), 0 si no
 
     public LocalDateTime fechaHora() {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(cuando), ZoneId.systemDefault());

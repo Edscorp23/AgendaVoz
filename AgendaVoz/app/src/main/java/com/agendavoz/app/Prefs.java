@@ -34,6 +34,29 @@ public final class Prefs {
         return sp(c).getString("idioma", "es-PE");
     }
 
+    /** Cada cuántos segundos repite el recordatorio hablado. */
+    public static int repetirSeg(Context c) {
+        return Math.max(10, sp(c).getInt("repetir_seg", 30));
+    }
+
+    /** Durante cuántos minutos insiste hablando antes de posponer solo. */
+    public static int insistirMin(Context c) {
+        return Math.max(1, sp(c).getInt("insistir_min", 3));
+    }
+
+    /** Si no respondes, en cuántos minutos vuelve a avisar (0 = no vuelve a avisar). */
+    public static int reavisarMin(Context c) {
+        return Math.max(0, sp(c).getInt("reavisar_min", 10));
+    }
+
+    public static void guardarRecordatorio(Context c, int repetirSeg, int insistirMin, int reavisarMin) {
+        sp(c).edit()
+                .putInt("repetir_seg", Math.max(10, repetirSeg))
+                .putInt("insistir_min", Math.max(1, insistirMin))
+                .putInt("reavisar_min", Math.max(0, reavisarMin))
+                .apply();
+    }
+
     public static boolean configuracionInicialHecha(Context c) {
         return sp(c).getBoolean("config_inicial", false);
     }

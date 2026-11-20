@@ -98,4 +98,20 @@ public class VozParserTest {
         assertEquals(Boolean.TRUE, p.interpretarSiNo("sí, guárdalo"));
         assertEquals(Boolean.FALSE, p.interpretarSiNo("no"));
     }
+
+    @Test
+    public void respuestasAlRecordatorio() {
+        assertEquals(VozParser.RESP_HECHO, p.interpretarRespuestaRecordatorio("listo"));
+        assertEquals(VozParser.RESP_HECHO, p.interpretarRespuestaRecordatorio("ya lo hice"));
+        assertEquals(VozParser.RESP_HECHO, p.interpretarRespuestaRecordatorio("Hecho"));
+        assertEquals(10, p.interpretarRespuestaRecordatorio("posponer"));
+        assertEquals(15, p.interpretarRespuestaRecordatorio("posponlo 15 minutos"));
+        assertEquals(30, p.interpretarRespuestaRecordatorio("recuérdame en media hora"));
+        assertEquals(60, p.interpretarRespuestaRecordatorio("en una hora"));
+        assertEquals(120, p.interpretarRespuestaRecordatorio("dentro de 2 horas"));
+        assertEquals(5, p.interpretarRespuestaRecordatorio("en cinco minutos"));
+        assertEquals(10, p.interpretarRespuestaRecordatorio("ahora no, más tarde"));
+        assertEquals(VozParser.RESP_SILENCIAR, p.interpretarRespuestaRecordatorio("silencio"));
+        assertEquals(VozParser.RESP_NO_ENTENDIDA, p.interpretarRespuestaRecordatorio("banana"));
+    }
 }

@@ -415,6 +415,35 @@ public class VozParser {
         return null;
     }
 
+    public static final int RESP_HECHO = -1;
+    public static final int RESP_SILENCIAR = -2;
+    public static final int RESP_NO_ENTENDIDA = 0;
+
+    /**
+     * Interpreta la respuesta hablada a un recordatorio que está sonando.
+     * Devuelve RESP_HECHO, RESP_SILENCIAR, los minutos a posponer (mayor que 0) o RESP_NO_ENTENDIDA.
+     */
+    public int interpretarRespuestaRecordatorio(String respuesta) {
+        String n = " " + normalizar(respuesta == null ? "" : respuesta).trim().replaceAll("\\s+", " ") + " ";
+        boolean pospone = n.matches(".*\\b(?:pospon\\w*|despues|luego|mas tarde|recuerdame|en un rato|ahorita no|ahora no|todavia no|aun no|dentro de|en \\d+|en (?:cinco|diez|quince|veinte|treinta|media|una))\\b.*");
+        if (!pospone && n.matches(".*\\b(?:hecho|hecha|listo|lista|ya (?:lo|la) hice|ya esta|ya termine|termine|terminado|terminada|completado|completada|realizado|realizada|cumplido|cumplida|ok ya|ya)\\b.*")) {
+            return RESP_HECHO;
+        }
+        if (n.matches(".*\\b(?:silencio|silenciar|silencia|callate|calla|para de hablar|deja de hablar|basta)\\b.*")) {
+            return RESP_SILENCIAR;
+        }
+        if (n.matches(".*\\bmedia hora\\b.*")) return 30;
+        if (n.matches(".*\\b(?:una|1) hora y media\\b.*")) return 90;
+        Matcher m = Pattern.compile("\\b(\\d+|" + NUM_PALABRA + "|quince|veinte|treinta|cuarenta|cuarenta y cinco|cincuenta|veinticinco)\\s+(minutos?|mins?|horas?)\\b").matcher(n);
+        if (m.find()) {
+            int c = numero(m.group(1));
+            if (c > 0) return m.group(2).startsWith("hora") ? c * 60 : c;
+        }
+        if (n.matches(".*\\buna hora\\b.*")) return 60;
+        if (pospone) return 10;
+        return RESP_NO_ENTENDIDA;
+    }
+
     /** Interpreta un sí/no hablado. */
     public Boolean interpretarSiNo(String respuesta) {
         String n = normalizar(respuesta == null ? "" : respuesta).trim();
