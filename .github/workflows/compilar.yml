@@ -1,0 +1,38 @@
+name: Compilar APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AgendaVoz
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Probar el intérprete de frases
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Compilar la APK
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Subir la APK para descargarla
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgendaVoz-apk
+          path: AgendaVoz/app/build/outputs/apk/debug/app-debug.apk
