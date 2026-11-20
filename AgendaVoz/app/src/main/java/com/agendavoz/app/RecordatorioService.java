@@ -31,6 +31,10 @@ public class RecordatorioService extends Service {
     public static final String ACCION_INICIAR = "com.agendavoz.app.VOZ_INICIAR";
     public static final String ACCION_PAUSAR = "com.agendavoz.app.VOZ_PAUSAR";
     public static final String ACCION_CERRAR_PANTALLA = "com.agendavoz.app.CERRAR_ALARMA";
+    /** Texto fijo a decir (lo usa el resumen de la mañana). */
+    public static final String EXTRA_TEXTO = "texto";
+    /** Id del recordatorio que está insistiendo ahora (para mostrar sus botones en la app), o MIN_VALUE. */
+    public static volatile long idInsistiendo = Long.MIN_VALUE;
     /** Avisos a la pantalla del recordatorio para que escuche solo cuando la app no está hablando. */
     public static final String ACCION_HABLANDO = "com.agendavoz.app.VOZ_HABLANDO";
     public static final String ACCION_CALLADO = "com.agendavoz.app.VOZ_CALLADO";
@@ -57,6 +61,7 @@ public class RecordatorioService extends Service {
     private long inicio;
     private int vecesDicho;
     private boolean arrancarAlEstarListo = false;
+    private String textoFijo = null;
 
     private final AudioAttributes atributos = new AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
@@ -154,6 +159,8 @@ public class RecordatorioService extends Service {
         idActual = id;
         esPrevio = previo;
         reavisos = rea;
+        textoFijo = intent.getStringExtra(EXTRA_TEXTO);
+        idInsistiendo = previo ? Long.MIN_VALUE : id;
         inicio = System.currentTimeMillis();
         vecesDicho = 0;
         h.removeCallbacks(siguiente);
@@ -202,7 +209,11 @@ public class RecordatorioService extends Service {
             // El aviso previo se dice una sola vez y queda como notificación normal.
             long id = idActual;
             idActual = NINGUNO;
-            Acciones.mostrarAviso(this, id, "Pronto: " + Acciones.nombre(this, id), textoPrevioCorto(id), false);
+            if (id == Alarmas.ID_RESUMEN) {
+                Acciones.mostrarAviso(this, id, "Tus pendientes de hoy", Resumen.listaDeHoy(this), false);
+            } else {
+                Acciones.mostrarAviso(this, id, "Pronto: " + Acciones.nombre(this, id), textoPrevioCorto(id), false);
+            }
             stopSelf();
             return;
         }
@@ -213,6 +224,7 @@ public class RecordatorioService extends Service {
     private void tiempoAgotado() {
         long id = idActual;
         idActual = NINGUNO;
+        idInsistiendo = Long.MIN_VALUE;
         int reavisar = Prefs.reavisarMin(this);
         if (id != Alarmas.ID_PRUEBA && reavisar > 0 && reavisos < MAX_REAVISOS) {
             Acciones.posponer(this, id, reavisar, reavisos + 1, true);
@@ -232,6 +244,7 @@ public class RecordatorioService extends Service {
     }
 
     private String texto() {
+        if (textoFijo != null) return textoFijo;
         if (idActual == Alarmas.ID_PRUEBA) {
             return vecesDicho == 0
                     ? "Esta es una prueba de Agenda Voz. Así te recordaré tus reuniones y tareas. Toca Hecho para terminar, o Posponer."
@@ -344,7 +357,10 @@ public class RecordatorioService extends Service {
         String titulo = Acciones.nombre(this, idActual);
         String texto;
         String completo;
-        if (idActual == Alarmas.ID_PRUEBA) {
+        if (idActual == Alarmas.ID_RESUMEN) {
+            texto = "Buenos días: tus pendientes de hoy";
+            completo = Resumen.listaDeHoy(this);
+        } else if (idActual == Alarmas.ID_PRUEBA) {
             texto = "Prueba del recordatorio hablado";
             completo = texto + "\nToca Hecho para terminar.";
         } else {
@@ -391,6 +407,7 @@ public class RecordatorioService extends Service {
 
     @Override
     public void onDestroy() {
+        idInsistiendo = Long.MIN_VALUE;
         h.removeCallbacksAndMessages(null);
         callar();
         if (tts != null) tts.shutdown();

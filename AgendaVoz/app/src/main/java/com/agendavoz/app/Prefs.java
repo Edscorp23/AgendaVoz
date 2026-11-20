@@ -49,6 +49,49 @@ public final class Prefs {
         return Math.max(0, sp(c).getInt("reavisar_min", 10));
     }
 
+    // ---- radio
+    public static String ultimaRadio(Context c) {
+        return sp(c).getString("ultima_radio", "");
+    }
+
+    public static void guardarUltimaRadio(Context c, String nombre) {
+        sp(c).edit().putString("ultima_radio", nombre == null ? "" : nombre).apply();
+    }
+
+    // ---- resumen de la mañana
+    public static boolean resumenActivo(Context c) {
+        return sp(c).getBoolean("resumen_activo", true);
+    }
+
+    public static int resumenHora(Context c) {
+        return sp(c).getInt("resumen_hora", 7);
+    }
+
+    public static int resumenMinuto(Context c) {
+        return sp(c).getInt("resumen_minuto", 0);
+    }
+
+    public static void guardarResumenActivo(Context c, boolean si) {
+        sp(c).edit().putBoolean("resumen_activo", si).apply();
+    }
+
+    // ---- «Honor» descansa de noche
+    public static boolean honorDescansaDeNoche(Context c) {
+        return sp(c).getBoolean("honor_noche", true);
+    }
+
+    public static int honorNocheDesde(Context c) {
+        return sp(c).getInt("honor_noche_desde", 23);
+    }
+
+    public static int honorNocheHasta(Context c) {
+        return sp(c).getInt("honor_noche_hasta", 6);
+    }
+
+    public static void guardarHonorDescansaDeNoche(Context c, boolean si) {
+        sp(c).edit().putBoolean("honor_noche", si).apply();
+    }
+
     /** Escuchar la palabra «Honor» todo el tiempo, también con la pantalla bloqueada. */
     public static boolean activarConHonor(Context c) {
         return sp(c).getBoolean("activar_honor", false);

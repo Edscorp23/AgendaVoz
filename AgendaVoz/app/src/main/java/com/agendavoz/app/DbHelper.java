@@ -13,7 +13,7 @@ import java.util.List;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB = "agenda.db";
-    private static final int VERSION = 3;
+    private static final int VERSION = 5;
     private static final String T = "eventos";
 
     private static DbHelper instancia;
@@ -38,8 +38,18 @@ public class DbHelper extends SQLiteOpenHelper {
                 + "aviso_min INTEGER NOT NULL DEFAULT 10,"
                 + "hecho INTEGER NOT NULL DEFAULT 0,"
                 + "pospuesto INTEGER NOT NULL DEFAULT 0,"
-                + "calendario_id TEXT)");
+                + "calendario_id TEXT,"
+                + "repetir TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE INDEX idx_cuando ON " + T + "(cuando)");
+        crearTablaRadios(db);
+    }
+
+    private static void crearTablaRadios(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS radios ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre TEXT NOT NULL,"
+                + "url TEXT NOT NULL,"
+                + "detalle TEXT)");
     }
 
     @Override
@@ -49,6 +59,12 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldV < 3) {
             db.execSQL("ALTER TABLE " + T + " ADD COLUMN calendario_id TEXT");
+        }
+        if (oldV < 4) {
+            db.execSQL("ALTER TABLE " + T + " ADD COLUMN repetir TEXT NOT NULL DEFAULT ''");
+        }
+        if (oldV < 5) {
+            crearTablaRadios(db);
         }
     }
 
@@ -62,6 +78,7 @@ public class DbHelper extends SQLiteOpenHelper {
         cv.put("hecho", e.hecho ? 1 : 0);
         cv.put("pospuesto", e.pospuesto);
         cv.put("calendario_id", e.calendarioId);
+        cv.put("repetir", e.repetir == null ? "" : e.repetir);
         return cv;
     }
 
@@ -112,6 +129,45 @@ public class DbHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(desde)}, "cuando ASC");
     }
 
+    /** Recordatorios que se repiten y no están marcados como hechos. */
+    public List<Evento> repetidos() {
+        return consulta("hecho=0 AND repetir<>''", null, "cuando ASC");
+    }
+
+    // ------------------------------------------------------------------ radios
+
+    public long insertarRadio(Radio r) {
+        ContentValues cv = new ContentValues();
+        cv.put("nombre", r.nombre);
+        cv.put("url", r.url);
+        cv.put("detalle", r.detalle);
+        r.id = getWritableDatabase().insert("radios", null, cv);
+        return r.id;
+    }
+
+    public void eliminarRadio(long id) {
+        getWritableDatabase().delete("radios", "id=?", new String[]{String.valueOf(id)});
+    }
+
+    public List<Radio> radios() {
+        List<Radio> l = new ArrayList<>();
+        Cursor c = getReadableDatabase().query("radios", null, null, null, null, null, "nombre COLLATE NOCASE ASC");
+        try {
+            while (c.moveToNext()) {
+                Radio r = new Radio();
+                r.id = c.getLong(c.getColumnIndexOrThrow("id"));
+                r.nombre = c.getString(c.getColumnIndexOrThrow("nombre"));
+                r.url = c.getString(c.getColumnIndexOrThrow("url"));
+                String d = c.getString(c.getColumnIndexOrThrow("detalle"));
+                r.detalle = d == null ? "" : d;
+                l.add(r);
+            }
+        } finally {
+            c.close();
+        }
+        return l;
+    }
+
     public List<Evento> completados() {
         return consulta("hecho=1", null, "cuando DESC");
     }
@@ -132,6 +188,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 e.hecho = c.getInt(c.getColumnIndexOrThrow("hecho")) == 1;
                 e.pospuesto = c.getLong(c.getColumnIndexOrThrow("pospuesto"));
                 e.calendarioId = c.getString(c.getColumnIndexOrThrow("calendario_id"));
+                String rep = c.getString(c.getColumnIndexOrThrow("repetir"));
+                e.repetir = rep == null ? "" : rep;
                 lista.add(e);
             }
         } finally {

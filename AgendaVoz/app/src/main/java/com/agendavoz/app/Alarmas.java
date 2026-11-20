@@ -22,6 +22,7 @@ public final class Alarmas {
     public static final String EXTRA_PREVIO = "previo";
     public static final String EXTRA_REAVISOS = "reavisos";
     public static final long ID_PRUEBA = -1;
+    public static final long ID_RESUMEN = -2;
 
     private Alarmas() {
     }
@@ -77,7 +78,28 @@ public final class Alarmas {
         am.cancel(pendiente(ctx, id, true, 0));
     }
 
+    /**
+     * Pasa a la siguiente vez los recordatorios repetidos cuya hora ya pasó hace rato
+     * (por ejemplo, si ayer no respondiste). Así siempre hay una próxima alarma.
+     */
+    public static void avanzarRepetidos(Context ctx) {
+        DbHelper db = DbHelper.get(ctx);
+        long ahora = System.currentTimeMillis();
+        for (Evento e : db.repetidos()) {
+            boolean vencido = e.cuando < ahora - 2 * 60 * 60_000L && e.pospuesto < ahora;
+            if (!vencido) continue;
+            java.time.LocalDateTime sig = VozParser.siguiente(e.repetir, e.fechaHora().toLocalTime(),
+                    java.time.LocalDateTime.now());
+            if (sig == null) continue;
+            e.setFechaHora(sig);
+            e.pospuesto = 0;
+            db.actualizar(e);
+            programar(ctx, e);
+        }
+    }
+
     public static void reprogramarTodo(Context ctx) {
+        avanzarRepetidos(ctx);
         List<Evento> lista = DbHelper.get(ctx).pendientesConAlarmaFutura(System.currentTimeMillis());
         for (Evento e : lista) programar(ctx, e);
     }

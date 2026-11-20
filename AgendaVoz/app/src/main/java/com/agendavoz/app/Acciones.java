@@ -27,12 +27,23 @@ public final class Acciones {
         if (id != Alarmas.ID_PRUEBA) {
             DbHelper db = DbHelper.get(ctx);
             Evento e = db.obtener(id);
-            if (e != null) {
+            Alarmas.cancelar(ctx, id);
+            if (e != null && e.seRepite()) {
+                // Se repite: en vez de cerrarla, se programa la próxima vez.
+                java.time.LocalDateTime desde = java.time.LocalDateTime.now().isAfter(e.fechaHora())
+                        ? java.time.LocalDateTime.now() : e.fechaHora();
+                java.time.LocalDateTime sig = VozParser.siguiente(e.repetir, e.fechaHora().toLocalTime(), desde);
+                if (sig != null) {
+                    e.setFechaHora(sig);
+                    e.pospuesto = 0;
+                    db.actualizar(e);
+                    Alarmas.programar(ctx, e);
+                }
+            } else if (e != null) {
                 e.hecho = true;
                 e.pospuesto = 0;
                 db.actualizar(e);
             }
-            Alarmas.cancelar(ctx, id);
         }
         detenerVoz(ctx, id);
         quitarAviso(ctx, id);
@@ -70,6 +81,7 @@ public final class Acciones {
 
     static String nombre(Context ctx, long id) {
         if (id == Alarmas.ID_PRUEBA) return "Recordatorio de prueba";
+        if (id == Alarmas.ID_RESUMEN) return "Resumen del día";
         Evento e = DbHelper.get(ctx).obtener(id);
         return e == null ? "Recordatorio" : e.titulo;
     }

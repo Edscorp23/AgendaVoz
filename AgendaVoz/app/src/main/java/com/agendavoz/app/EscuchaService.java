@@ -43,6 +43,7 @@ public class EscuchaService extends Service {
     public static final String MOTIVO_APP = "app";
     public static final String MOTIVO_RECORDATORIO = "recordatorio";
     private static final String MOTIVO_DESPERTAR = "despertar";
+    private static final String MOTIVO_NOCHE = "noche";
 
     private static final String CANAL = "escucha_honor";
     private static final int ID_NOTIF = 4343;
@@ -172,6 +173,7 @@ public class EscuchaService extends Service {
             cargarModelo();
             return;
         }
+        if (revisarNoche()) return;
         if (!motivosPausa.isEmpty() || oido != null) return;
         try {
             Recognizer r = new Recognizer(modelo, 16000.0f, GRAMATICA);
@@ -179,6 +181,7 @@ public class EscuchaService extends Service {
             oido.startListening(oyente);
             estado = "Escuchando «Honor»";
             actualizarNotificacion("Di «Honor» para hablarme");
+            programarInicioDeNoche();
         } catch (Exception e) {
             oido = null;
             estado = "No se pudo usar el micrófono";
@@ -186,6 +189,56 @@ public class EscuchaService extends Service {
             h.postDelayed(this::empezarSiSePuede, 10_000);
         }
     }
+
+    // ------------------------------------------------------------------ descanso nocturno (11 p.m. a 6 a.m.)
+
+    private boolean esDeNoche() {
+        if (!Prefs.honorDescansaDeNoche(this)) return false;
+        int desde = Prefs.honorNocheDesde(this);
+        int hasta = Prefs.honorNocheHasta(this);
+        int h = java.time.LocalTime.now().getHour();
+        return desde > hasta ? (h >= desde || h < hasta) : (h >= desde && h < hasta);
+    }
+
+    /** Si es de noche, deja de escuchar y programa el regreso a la hora indicada. Devuelve true si es de noche. */
+    private boolean revisarNoche() {
+        if (!esDeNoche()) {
+            motivosPausa.remove(MOTIVO_NOCHE);
+            return false;
+        }
+        motivosPausa.add(MOTIVO_NOCHE);
+        pararOido();
+        int hasta = Prefs.honorNocheHasta(this);
+        estado = "Descansando hasta las " + hasta + ":00";
+        actualizarNotificacion("«Honor» descansa de noche; vuelve a las " + hasta + ":00");
+        // Una alarma (no un temporizador) despierta al servicio aunque el teléfono esté dormido.
+        java.time.LocalDateTime fin = java.time.LocalDate.now().atTime(hasta, 0);
+        if (!fin.isAfter(java.time.LocalDateTime.now())) fin = fin.plusDays(1);
+        Intent i = new Intent(this, EscuchaService.class);
+        i.setAction(ACCION_REANUDAR);
+        i.putExtra(EXTRA_MOTIVO, MOTIVO_NOCHE);
+        PendingIntent pi = PendingIntent.getForegroundService(this, 47, i,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        android.app.AlarmManager am = getSystemService(android.app.AlarmManager.class);
+        if (am != null) {
+            long ms = fin.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            if (Alarmas.puedeExactas(this)) am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, ms, pi);
+            else am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, ms, pi);
+        }
+        return true;
+    }
+
+    /** Mientras escucha, el procesador está despierto, así que basta un temporizador hasta las 11 p.m. */
+    private void programarInicioDeNoche() {
+        h.removeCallbacks(empiezaLaNoche);
+        if (!Prefs.honorDescansaDeNoche(this)) return;
+        java.time.LocalDateTime inicio = java.time.LocalDate.now().atTime(Prefs.honorNocheDesde(this), 0);
+        if (!inicio.isAfter(java.time.LocalDateTime.now())) inicio = inicio.plusDays(1);
+        long ms = java.time.Duration.between(java.time.LocalDateTime.now(), inicio).toMillis();
+        h.postDelayed(empiezaLaNoche, Math.max(1000, ms));
+    }
+
+    private final Runnable empiezaLaNoche = this::revisarNoche;
 
     private void pararOido() {
         if (oido != null) {

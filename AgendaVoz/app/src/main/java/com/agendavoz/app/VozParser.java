@@ -31,6 +31,12 @@ public class VozParser {
     public static final String LISTAR = "listar";
     public static final String ELIMINAR = "eliminar";
     public static final String MODIFICAR = "modificar";
+    public static final String MUSICA = "musica";
+    public static final String RADIO = "radio";
+    public static final String DETENER_MUSICA = "detener_musica";
+
+    public static final String REP_DIARIO = "diario";
+    public static final String REP_SEMANAL = "semanal:";
 
     public static final String FALTA_FECHA = "fecha";
     public static final String FALTA_HORA = "hora";
@@ -49,6 +55,10 @@ public class VozParser {
         public String rango = "";        // para listar: "dia", "semana" o "proximos"
         public String objetivo = "";     // palabras para encontrar el evento a borrar/cambiar
         public String origen = "local";
+        /** Repetición: "" (no se repite), "diario" o "semanal:1,3,5" (1 = lunes … 7 = domingo). */
+        public String repetir = "";
+        /** Para música/radio: artista, canción o nombre de la radio. */
+        public String consulta = "";
 
         public boolean esCrear() {
             return CREAR_REUNION.equals(intencion) || CREAR_TAREA.equals(intencion);
@@ -60,6 +70,8 @@ public class VozParser {
                     + ", hora=" + hora + (horaAmbigua != null ? ", ambigua=" + horaAmbigua + ":" + minutoAmbiguo : "")
                     + ", participantes=" + participantes + ", faltantes=" + faltantes
                     + (rango.isEmpty() ? "" : ", rango=" + rango)
+                    + (repetir.isEmpty() ? "" : ", repetir=" + repetir)
+                    + (consulta.isEmpty() ? "" : ", consulta='" + consulta + "'")
                     + (objetivo.isEmpty() ? "" : ", objetivo='" + objetivo + "'") + "}";
         }
     }
@@ -151,8 +163,39 @@ public class VozParser {
             "\\bcon ((?:(?:el|la|los|las|mi|mis|don|dona|el senor|la senora|el ingeniero|la ingeniera|el profesor|la profesora|el doctor|la doctora) )?[a-z]+"
                     + "(?: (?:y|e) (?:(?:el|la|los|las|mi|mis|don|dona) )?[a-z]+)*)");
 
+    // ---- música y radio (la orden debe ir al inicio de la frase)
+    private static final String INICIO_ORDEN = "^\\s*(?:(?:honor|oye|ok|hola|por favor)\\s+)*";
+    private static final Pattern P_DETENER = Pattern.compile(INICIO_ORDEN
+            + "(?:para|paren|pausa|pausar|pon pausa a|deten|detener|apaga|apagar|quita|quitar|calla|silencia|baja)\\b.{0,20}?"
+            + "\\b(?:musica|radio|cancion|canciones|spotify|emisora)\\b");
+    private static final Pattern P_RADIO = Pattern.compile(INICIO_ORDEN
+            + "(?:pon|ponme|poner|pone|reproduce|sintoniza|sintonizar|escuchar|quiero escuchar|abre|abrir|enciende|prende|cambia a)\\b"
+            + ".{0,12}?\\b(?:radio|emisora)\\b\\s*(.*)$");
+    private static final Pattern P_SINTONIZA = Pattern.compile(INICIO_ORDEN + "(?:sintoniza|sintonizar)\\s+(.+)$");
+    private static final Pattern P_MUSICA = Pattern.compile(INICIO_ORDEN
+            + "(?:pon|ponme|poner|pone|reproduce|reproducir|toca|tocame|quiero escuchar|escuchar|abre)\\b.{0,12}?"
+            + "\\b(?:musica|canciones|cancion|temas|exitos|spotify)\\b(?:\\s+(?:de|del|de la|de los|de las)\\s+(.+))?\\s*$");
+    private static final Pattern P_EN_SPOTIFY = Pattern.compile(INICIO_ORDEN
+            + "(?:pon|ponme|reproduce|reproducir|toca|tocame|busca)\\s+(.+?)\\s+en spotify\\s*$");
+    private static final Pattern P_QUIERO_ESCUCHAR = Pattern.compile(INICIO_ORDEN
+            + "(?:quiero escuchar|reproduce|reproducir)\\s+(?:a\\s+)?(.+)$");
+
+    // ---- repeticiones
+    private static final String DIA_RE = "(?:lunes|martes|miercoles|jueves|viernes|sabados?|domingos?)";
+    private static final Pattern P_LABORABLES = Pattern.compile(
+            "\\b(?:todos los dias de semana|de lunes a viernes|entre semana|los dias de semana|dias laborables|dias de trabajo|dias habiles)\\b");
+    private static final Pattern P_FINDE = Pattern.compile(
+            "\\b(?:todos los fines de semana|cada fin de semana|los fines de semana)\\b");
+    private static final Pattern P_DIARIO = Pattern.compile(
+            "\\b(?:todos los dias|todo los dias|cada dia|diariamente|a diario|todas las (mananas|tardes|noches))\\b");
+    private static final Pattern P_SEMANAL = Pattern.compile(
+            "\\b(?:todos los|todas las|cada|los)\\s+(" + DIA_RE + "(?:\\s+(?:y\\s+|e\\s+)?" + DIA_RE + ")*)\\b");
+    /** Dos o más días seguidos sin «todos los»: «lunes, miércoles y viernes». */
+    private static final Pattern P_VARIOS_DIAS = Pattern.compile(
+            "\\b(" + DIA_RE + "(?:\\s+(?:y\\s+|e\\s+)?" + DIA_RE + ")+)\\b");
+
     private static final Set<String> INICIO_VACIO = new HashSet<>(Arrays.asList(
-            "oye", "hola", "por", "favor", "porfa", "porfavor", "crea", "crear", "creame", "agenda", "agendar", "agendame",
+            "honor", "ok", "oye", "hola", "por", "favor", "porfa", "porfavor", "crea", "crear", "creame", "agenda", "agendar", "agendame",
             "programa", "programar", "programame", "anota", "anotar", "anotame", "apunta", "apuntar", "apuntame",
             "pon", "ponme", "poner", "anade", "anademe", "agrega", "agregar", "agregame", "registra", "registrar",
             "nueva", "nuevo", "haz", "hazme", "recuerdame", "recordarme", "recuerda", "recuerdeme", "acuerdame",
@@ -175,6 +218,9 @@ public class VozParser {
         char[] norm = normalizar(original).toCharArray();
         String normCompleto = new String(norm);
 
+        // ---------------- música y radio
+        if (analizarMusica(r, original, normCompleto)) return r;
+
         // ---------------- intención
         if (P_LISTAR.matcher(normCompleto.trim()).find() && !P_ELIMINAR.matcher(normCompleto).find()
                 && !P_MODIFICAR.matcher(normCompleto).find()) {
@@ -193,6 +239,40 @@ public class VozParser {
         Boolean pm = null;
         LocalDate fecha = null;
         Matcher m;
+
+        // ---------------- repeticiones («todos los días», «de lunes a viernes», «los lunes y jueves»)
+        if (r.esCrear()) {
+            if ((m = P_LABORABLES.matcher(new String(norm))).find()) {
+                r.repetir = REP_SEMANAL + "1,2,3,4,5";
+                borrar(norm, m.start(), m.end());
+            } else if ((m = P_FINDE.matcher(new String(norm))).find()) {
+                r.repetir = REP_SEMANAL + "6,7";
+                borrar(norm, m.start(), m.end());
+            } else if ((m = P_DIARIO.matcher(new String(norm))).find()) {
+                r.repetir = REP_DIARIO;
+                if (m.group(1) != null) pm = !m.group(1).equals("mananas");
+                borrar(norm, m.start(), m.end());
+            } else if ((m = P_SEMANAL.matcher(new String(norm))).find()
+                    || (m = P_VARIOS_DIAS.matcher(new String(norm))).find()) {
+                Set<Integer> dias = new java.util.TreeSet<>();
+                Matcher d = Pattern.compile(DIA_RE).matcher(m.group(1));
+                while (d.find()) {
+                    String nombre = d.group();
+                    if (nombre.endsWith("s") && !nombre.equals("lunes") && !nombre.equals("martes")
+                            && !nombre.equals("miercoles") && !nombre.equals("jueves") && !nombre.equals("viernes")) {
+                        nombre = nombre.substring(0, nombre.length() - 1);
+                    }
+                    DayOfWeek dw = DIAS.get(nombre);
+                    if (dw != null) dias.add(dw.getValue());
+                }
+                if (!dias.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (Integer x : dias) sb.append(sb.length() == 0 ? "" : ",").append(x);
+                    r.repetir = dias.size() == 7 ? REP_DIARIO : REP_SEMANAL + sb;
+                    borrar(norm, m.start(), m.end());
+                }
+            }
+        }
         if ((m = P_ESTA_PM.matcher(new String(norm))).find()) {
             pm = true;
             fecha = ahora.toLocalDate();
@@ -397,7 +477,7 @@ public class VozParser {
 
         // ---------------- faltantes
         if (r.esCrear()) {
-            if (r.fecha == null) r.faltantes.add(FALTA_FECHA);
+            if (r.fecha == null && r.repetir.isEmpty()) r.faltantes.add(FALTA_FECHA);
             if (r.hora == null && r.horaAmbigua == null) r.faltantes.add(FALTA_HORA);
             if (r.horaAmbigua != null) r.faltantes.add(FALTA_AMPM);
             if (r.titulo.isEmpty()) r.titulo = CREAR_REUNION.equals(r.intencion) ? "Reunión" : "Tarea";
@@ -453,6 +533,100 @@ public class VozParser {
     }
 
     // ------------------------------------------------------------------ ayudas
+
+    // ------------------------------------------------------------------ música y radio
+
+    /** Detecta «pon música de X», «pon radio X», «para la radio». Devuelve true si era una de esas órdenes. */
+    private boolean analizarMusica(Resultado r, String original, String norm) {
+        Matcher m;
+        if (P_DETENER.matcher(norm).find()) {
+            r.intencion = DETENER_MUSICA;
+            return true;
+        }
+        if ((m = P_RADIO.matcher(norm)).find() || (m = P_SINTONIZA.matcher(norm)).find()) {
+            r.intencion = RADIO;
+            r.consulta = m.group(1) != null ? limpiarConsulta(original.substring(m.start(1), m.end(1))) : "";
+            return true;
+        }
+        if ((m = P_EN_SPOTIFY.matcher(norm)).find()) {
+            r.intencion = MUSICA;
+            r.consulta = limpiarConsulta(original.substring(m.start(1), m.end(1)));
+            return true;
+        }
+        if ((m = P_MUSICA.matcher(norm)).find()) {
+            r.intencion = MUSICA;
+            r.consulta = m.group(1) != null ? limpiarConsulta(original.substring(m.start(1), m.end(1))) : "";
+            return true;
+        }
+        if ((m = P_QUIERO_ESCUCHAR.matcher(norm)).find()) {
+            r.intencion = MUSICA;
+            r.consulta = limpiarConsulta(original.substring(m.start(1), m.end(1)));
+            return true;
+        }
+        return false;
+    }
+
+    private static String limpiarConsulta(String s) {
+        String t = s.trim().replaceAll("[¿?¡!.,]+$", "").trim();
+        String n = normalizar(t).trim();
+        String[] colas = {" por favor", " porfa", " en spotify", " ahora", " ya"};
+        boolean cambio = true;
+        while (cambio) {
+            cambio = false;
+            for (String c : colas) {
+                if (n.endsWith(c)) {
+                    t = t.substring(0, t.length() - c.length()).trim();
+                    n = normalizar(t).trim();
+                    cambio = true;
+                }
+            }
+        }
+        return t;
+    }
+
+    // ------------------------------------------------------------------ repeticiones
+
+    /** Días (1 = lunes … 7 = domingo) en que ocurre una repetición. */
+    public static Set<Integer> diasDe(String repetir) {
+        Set<Integer> dias = new java.util.TreeSet<>();
+        if (REP_DIARIO.equals(repetir)) {
+            for (int i = 1; i <= 7; i++) dias.add(i);
+        } else if (repetir != null && repetir.startsWith(REP_SEMANAL)) {
+            for (String x : repetir.substring(REP_SEMANAL.length()).split(",")) {
+                try {
+                    dias.add(Integer.parseInt(x.trim()));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return dias;
+    }
+
+    /** Primera vez (estrictamente después de «desde») que toca la repetición a esa hora. */
+    public static LocalDateTime siguiente(String repetir, LocalTime hora, LocalDateTime desde) {
+        Set<Integer> dias = diasDe(repetir);
+        if (dias.isEmpty() || hora == null) return null;
+        LocalDate d = desde.toLocalDate();
+        for (int i = 0; i < 15; i++) {
+            LocalDateTime c = d.plusDays(i).atTime(hora);
+            if (c.isAfter(desde) && dias.contains(c.getDayOfWeek().getValue())) return c;
+        }
+        return null;
+    }
+
+    /** «todos los días», «de lunes a viernes», «los lunes, miércoles y viernes». */
+    public static String describirRepeticion(String repetir) {
+        Set<Integer> dias = diasDe(repetir);
+        if (dias.isEmpty()) return "";
+        if (dias.size() == 7) return "todos los días";
+        if (dias.equals(new HashSet<>(Arrays.asList(1, 2, 3, 4, 5)))) return "de lunes a viernes";
+        if (dias.equals(new HashSet<>(Arrays.asList(6, 7)))) return "los fines de semana";
+        String[] nombres = {"", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados", "domingos"};
+        List<String> l = new ArrayList<>();
+        for (Integer x : dias) l.add(nombres[x]);
+        if (l.size() == 1) return "todos los " + l.get(0);
+        return "los " + String.join(", ", l.subList(0, l.size() - 1)) + " y " + l.get(l.size() - 1);
+    }
 
     /** Minúsculas, sin acentos y sin signos; mantiene exactamente la longitud del texto. */
     public static String normalizar(String s) {

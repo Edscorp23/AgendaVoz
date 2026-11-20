@@ -93,7 +93,14 @@ public class MainActivity extends Activity {
     };
     private int intentosConfirmacion = 0;
 
-    private TextView textoEstado, textoOido, tituloLista, vacio;
+    private TextView textoEstado, textoOido, tituloLista, vacio, bannerRecordatorio, bannerPermisos;
+    private final Runnable revisarBanners = new Runnable() {
+        @Override
+        public void run() {
+            actualizarBanners();
+            if (enPrimerPlano) ui.postDelayed(this, 3000);
+        }
+    };
     private ImageButton botonMic;
     private EditText entrada;
     private EventoAdapter adapter;
@@ -109,6 +116,19 @@ public class MainActivity extends Activity {
         textoOido = findViewById(R.id.textoOido);
         tituloLista = findViewById(R.id.tituloLista);
         vacio = findViewById(R.id.vacio);
+        bannerRecordatorio = findViewById(R.id.bannerRecordatorio);
+        bannerPermisos = findViewById(R.id.bannerPermisos);
+        bannerRecordatorio.setOnClickListener(v -> {
+            long id = RecordatorioService.idInsistiendo;
+            if (id == Long.MIN_VALUE) {
+                actualizarBanners();
+                return;
+            }
+            Intent a = new Intent(this, AlarmaActivity.class);
+            a.putExtra(Alarmas.EXTRA_ID, id);
+            startActivity(a);
+        });
+        bannerPermisos.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         botonMic = findViewById(R.id.botonMic);
         entrada = findViewById(R.id.entradaTexto);
         ListView lista = findViewById(R.id.lista);
@@ -131,6 +151,8 @@ public class MainActivity extends Activity {
             return false;
         });
 
+        findViewById(R.id.botonRadios).setOnClickListener(
+                v -> startActivity(new Intent(this, RadiosActivity.class)));
         findViewById(R.id.botonAjustes).setOnClickListener(
                 v -> startActivity(new Intent(this, SettingsActivity.class)));
         Button completados = findViewById(R.id.botonCompletados);
@@ -145,6 +167,7 @@ public class MainActivity extends Activity {
         pedirPermisos();
         revisarDespertar(getIntent());
         EscuchaService.iniciar(this);
+        Resumen.programar(this);
         if (!Prefs.configuracionInicialHecha(this)) mostrarConfiguracionInicial();
     }
 
@@ -153,7 +176,10 @@ public class MainActivity extends Activity {
         super.onResume();
         enPrimerPlano = true;
         EscuchaService.pausar(this, EscuchaService.MOTIVO_APP);
+        Alarmas.avanzarRepetidos(this);
         refrescar();
+        ui.removeCallbacks(revisarBanners);
+        ui.post(revisarBanners);
         if (despertadoPendiente) {
             despertadoPendiente = false;
             modoDespertar = true;
@@ -538,7 +564,9 @@ public class MainActivity extends Activity {
     private void analizarFrase(String texto) {
         final LocalDateTime ahora = LocalDateTime.now();
         final VozParser.Resultado local = parser.analizar(texto, ahora);
-        if (!Prefs.iaActiva(this) || !ProxyClient.hayInternet(this)) {
+        boolean esMusica = VozParser.MUSICA.equals(local.intencion) || VozParser.RADIO.equals(local.intencion)
+                || VozParser.DETENER_MUSICA.equals(local.intencion);
+        if (esMusica || !Prefs.iaActiva(this) || !ProxyClient.hayInternet(this)) {
             manejar(local);
             return;
         }
@@ -567,6 +595,9 @@ public class MainActivity extends Activity {
         if (ia.hora == null && ia.horaAmbigua == null) tomarHora(ia, local);
         if (ia.participantes.isEmpty()) ia.participantes.addAll(local.participantes);
         if (ia.objetivo.isEmpty()) ia.objetivo = local.objetivo;
+        if (ia.repetir.isEmpty()) ia.repetir = local.repetir;
+        if (ia.consulta.isEmpty()) ia.consulta = local.consulta;
+        if (ia.esCrear() && !ia.repetir.isEmpty()) ia.faltantes.remove(VozParser.FALTA_FECHA);
         if (VozParser.LISTAR.equals(ia.intencion) && ia.rango.isEmpty()) ia.rango = local.rango;
         return ia;
     }
@@ -584,6 +615,17 @@ public class MainActivity extends Activity {
             case VozParser.MODIFICAR:
                 prepararCambio(r);
                 break;
+            case VozParser.MUSICA:
+                ponerMusica(r.consulta);
+                break;
+            case VozParser.RADIO:
+                ponerRadio(r.consulta);
+                break;
+            case VozParser.DETENER_MUSICA:
+                estado = NORMAL;
+                Musica.detenerTodo(this);
+                hablar("Listo, la detuve.", false);
+                break;
             default:
                 continuar();
         }
@@ -593,7 +635,7 @@ public class MainActivity extends Activity {
     private void continuar() {
         VozParser.Resultado r = pendiente;
         String que = VozParser.CREAR_REUNION.equals(r.intencion) ? "la reunión" : "la tarea";
-        if (r.fecha == null) {
+        if (r.fecha == null && r.repetir.isEmpty()) {
             estado = ESP_FECHA;
             hablar("¿Para qué día es " + que + "?", true);
             return;
@@ -609,6 +651,13 @@ public class MainActivity extends Activity {
                     + (r.minutoAmbiguo > 0 ? (r.minutoAmbiguo == 30 ? " y media" : " y " + r.minutoAmbiguo) : "");
             hablar("¿A " + h + " de la mañana o de la tarde?", true);
             return;
+        }
+        if (!r.repetir.isEmpty()) {
+            // Se repite: la primera vez es la próxima que toque desde ahora (o desde el día que se dijo).
+            LocalDateTime desde = r.fecha != null && r.fecha.isAfter(LocalDate.now())
+                    ? r.fecha.atStartOfDay().minusSeconds(1) : LocalDateTime.now();
+            LocalDateTime primera = VozParser.siguiente(r.repetir, r.hora, desde);
+            if (primera != null) r.fecha = primera.toLocalDate();
         }
         LocalDateTime cuando = r.fecha.atTime(r.hora);
         if (cuando.isBefore(LocalDateTime.now())) {
@@ -626,6 +675,11 @@ public class MainActivity extends Activity {
 
     private String describir(VozParser.Resultado r) {
         String tipo = VozParser.CREAR_REUNION.equals(r.intencion) ? "la reunión" : "la tarea";
+        if (!r.repetir.isEmpty()) {
+            return tipo + " «" + r.titulo + "», " + VozParser.describirRepeticion(r.repetir)
+                    + " a " + Formato.horaHablada(r.hora) + ". La primera vez será "
+                    + Formato.fechaHablada(r.fecha, LocalDate.now());
+        }
         return tipo + " «" + r.titulo + "», " + Formato.fechaHablada(r.fecha, LocalDate.now())
                 + ", a " + Formato.horaHablada(r.hora);
     }
@@ -646,6 +700,7 @@ public class MainActivity extends Activity {
         e.participantes = String.join(", ", r.participantes);
         e.setFechaHora(r.fecha.atTime(r.hora));
         e.avisoMin = Prefs.avisoMin(this);
+        e.repetir = r.repetir;
         DbHelper.get(this).insertar(e);
         Alarmas.programar(this, e);
         pendiente = null;
@@ -666,6 +721,39 @@ public class MainActivity extends Activity {
         eventoObjetivo = null;
         nuevaFechaHora = null;
         hablar(mensaje, false);
+    }
+
+    // ----------------------------------------------------------------- música y radio
+
+    private void ponerMusica(String consulta) {
+        estado = NORMAL;
+        if (!Musica.spotifyInstalado(this)) {
+            hablar("No encuentro Spotify en este teléfono. Instálalo desde Play Store y vuelve a pedírmelo.", false);
+            return;
+        }
+        String que = consulta == null || consulta.isEmpty() ? "música" : "música de " + consulta;
+        hablar("Pongo " + que + " en Spotify.", false);
+        // Se espera a terminar de hablar: al abrirse Spotify, la voz se cortaría.
+        ui.postDelayed(() -> {
+            if (!Musica.reproducirEnSpotify(this, consulta)) {
+                textoEstado.setText("No pude abrir Spotify.");
+            }
+        }, 2200);
+    }
+
+    private void ponerRadio(String consulta) {
+        estado = NORMAL;
+        Radio r = Musica.buscarRadio(this, consulta);
+        if (r == null) {
+            if (DbHelper.get(this).radios().isEmpty()) {
+                hablar("Todavía no tienes radios guardadas. Toca «Radios» arriba para agregarlas.", false);
+            } else {
+                hablar("No tengo guardada una radio llamada " + consulta + ". Agrégala en «Radios».", false);
+            }
+            return;
+        }
+        hablar("Pongo " + r.nombre + ".", false);
+        ui.postDelayed(() -> RadioService.tocar(this, r), 1500);
     }
 
     // ----------------------------------------------------------------- listar
@@ -829,6 +917,19 @@ public class MainActivity extends Activity {
 
     // ================================================================= lista y edición manual
 
+    /** Muestra el aviso «recordatorio sonando» y el de permisos que faltan. */
+    private void actualizarBanners() {
+        bannerRecordatorio.setVisibility(RecordatorioService.idInsistiendo != Long.MIN_VALUE ? View.VISIBLE : View.GONE);
+        List<String> faltan = Permisos.faltantes(this);
+        if (faltan.isEmpty()) {
+            bannerPermisos.setVisibility(View.GONE);
+        } else {
+            bannerPermisos.setText("⚠ Para que veas tus recordatorios con sus botones falta: "
+                    + String.join(", ", faltan) + ". Toca aquí para arreglarlo.");
+            bannerPermisos.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void refrescar() {
         DbHelper db = DbHelper.get(this);
         List<Evento> l = verCompletados ? db.completados() : db.pendientesDesde(0);
@@ -844,6 +945,9 @@ public class MainActivity extends Activity {
         if (e == null) return;
         String[] ops = e.hecho
                 ? new String[]{"Volver a pendientes", "Eliminar"}
+                : e.seRepite()
+                ? new String[]{"Marcar como hecha (pasa a la próxima vez)", "Cambiar fecha y hora", "Cambiar título",
+                "Dejar de repetir", "Eliminar"}
                 : new String[]{"Marcar como hecha", "Cambiar fecha y hora", "Cambiar título", "Eliminar"};
         new AlertDialog.Builder(this)
                 .setTitle(e.titulo)
@@ -851,6 +955,12 @@ public class MainActivity extends Activity {
                     String op = ops[which];
                     DbHelper db = DbHelper.get(this);
                     switch (op) {
+                        case "Dejar de repetir":
+                            e.repetir = "";
+                            db.actualizar(e);
+                            refrescar();
+                            break;
+                        case "Marcar como hecha (pasa a la próxima vez)":
                         case "Marcar como hecha":
                             Acciones.hecho(this, e.id);
                             refrescar();
@@ -956,6 +1066,7 @@ public class MainActivity extends Activity {
                 det += " · pospuesta hasta " + Formato.hora(java.time.LocalDateTime.ofInstant(
                         java.time.Instant.ofEpochMilli(e.pospuesto), ZoneId.systemDefault()).toLocalTime());
             }
+            if (e.seRepite()) det += " · " + VozParser.describirRepeticion(e.repetir);
             if (e.delCalendario()) det += " · del calendario";
             if (vencida) det += " · vencida";
             if (e.hecho) det += " · hecha";

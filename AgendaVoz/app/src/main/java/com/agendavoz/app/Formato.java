@@ -32,6 +32,17 @@ public final class Formato {
         return s.substring(0, 1).toUpperCase(ES) + s.substring(1);
     }
 
+    /** «jueves 20 de noviembre». */
+    public static String fechaLarga(LocalDate f) {
+        return f.format(DIA_LARGO);
+    }
+
+    /** true si el título ya empieza con «reunión», «junta» o «cita» (para no decir «reunión: reunión…»). */
+    public static boolean empiezaConReunion(String titulo) {
+        String n = VozParser.normalizar(titulo == null ? "" : titulo).trim();
+        return n.startsWith("reunion") || n.startsWith("junta") || n.startsWith("cita");
+    }
+
     public static String hora(LocalTime t) {
         return t.format(HORA);
     }

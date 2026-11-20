@@ -18,6 +18,11 @@ public class Evento {
     public boolean hecho;
     public long pospuesto;              // si se pospuso: nuevo momento del aviso (epoch ms), 0 si no
     public String calendarioId;         // si vino del calendario del teléfono: clave del evento; null si no
+    public String repetir = "";         // "" no se repite; "diario"; "semanal:1,3,5"
+
+    public boolean seRepite() {
+        return repetir != null && !repetir.isEmpty();
+    }
 
     public boolean delCalendario() {
         return calendarioId != null && !calendarioId.isEmpty();

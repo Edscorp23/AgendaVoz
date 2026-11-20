@@ -118,4 +118,32 @@ public class VozParserTest {
         assertEquals(10, p.interpretarRespuestaRecordatorio("Honor pospón"));
         assertEquals(20, p.interpretarRespuestaRecordatorio("Honor pospón 20 minutos"));
     }
+
+    @Test
+    public void repeticiones() {
+        VozParser.Resultado r = p.analizar("Recuérdame tomar agua todos los días a las 10 de la mañana", ahora);
+        assertEquals("diario", r.repetir);
+        assertEquals("Tomar agua", r.titulo);
+        assertTrue(r.faltantes.isEmpty());
+        r = p.analizar("Honor, gimnasio lunes miércoles y viernes a las 7 de la noche", ahora);
+        assertEquals("semanal:1,3,5", r.repetir);
+        assertEquals("Gimnasio", r.titulo);
+        r = p.analizar("de lunes a viernes a las 7 de la mañana marcar asistencia", ahora);
+        assertEquals("semanal:1,2,3,4,5", r.repetir);
+        assertEquals(LocalDateTime.of(2026, 11, 20, 19, 0),
+                VozParser.siguiente("semanal:1,3,5", LocalTime.of(19, 0), ahora));
+        assertEquals("los lunes, miércoles y viernes", VozParser.describirRepeticion("semanal:1,3,5"));
+    }
+
+    @Test
+    public void musicaYRadio() {
+        VozParser.Resultado r = p.analizar("pon música de Los Prisioneros", ahora);
+        assertEquals(VozParser.MUSICA, r.intencion);
+        assertEquals("Los Prisioneros", r.consulta);
+        r = p.analizar("Honor, pon radio RPP", ahora);
+        assertEquals(VozParser.RADIO, r.intencion);
+        assertEquals("RPP", r.consulta);
+        assertEquals(VozParser.DETENER_MUSICA, p.analizar("para la radio", ahora).intencion);
+        assertEquals(VozParser.CREAR_TAREA, p.analizar("para mañana a las 3 pagar la luz", ahora).intencion);
+    }
 }

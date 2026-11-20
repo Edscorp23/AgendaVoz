@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fondo"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        style="@style/Titulo"
+        android:text="Radios" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/fondo_tarjeta"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/radioSonando"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/texto"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/botonDetenerRadio"
+            style="@android:style/Widget.Material.Button.Borderless.Colored"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Detener"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/Seccion"
+        android:layout_marginTop="14dp"
+        android:text="MIS RADIOS (toca para escuchar, mantén para borrar)" />
+
+    <ListView
+        android:id="@+id/listaMisRadios"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/sinRadios"
+        style="@style/Ayuda"
+        android:text="Aún no guardaste radios. Búscalas abajo por nombre, o agrégalas con su enlace." />
+
+    <TextView
+        style="@style/Seccion"
+        android:layout_marginTop="10dp"
+        android:text="AGREGAR UNA RADIO" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/fondo_tarjeta"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp">
+
+        <EditText
+            android:id="@+id/campoBuscarRadio"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="Nombre: Moda, RPP, Oxígeno…"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:textColor="@color/texto"
+            android:textColorHint="@color/secundario" />
+
+        <Button
+            android:id="@+id/botonBuscarRadio"
+            style="@android:style/Widget.Material.Button.Borderless.Colored"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Buscar"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/estadoBusqueda"
+        style="@style/Ayuda" />
+
+    <ListView
+        android:id="@+id/listaResultados"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/botonAgregarEnlace"
+        style="@style/BotonSecundario"
+        android:text="Agregar con enlace (si no aparece en la búsqueda)" />
+</LinearLayout>

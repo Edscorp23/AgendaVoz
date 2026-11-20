@@ -71,6 +71,23 @@ public class SettingsActivity extends Activity {
         });
         findViewById(R.id.botonSincronizar).setOnClickListener(v -> revisarCalendario());
 
+        CheckBox checkResumen = findViewById(R.id.checkResumen);
+        checkResumen.setChecked(Prefs.resumenActivo(this));
+        checkResumen.setOnCheckedChangeListener((b, si) -> {
+            Prefs.guardarResumenActivo(this, si);
+            Resumen.programar(this);
+        });
+
+        CheckBox checkHonorNoche = findViewById(R.id.checkHonorNoche);
+        checkHonorNoche.setChecked(Prefs.honorDescansaDeNoche(this));
+        checkHonorNoche.setOnCheckedChangeListener((b, si) -> {
+            Prefs.guardarHonorDescansaDeNoche(this, si);
+            if (Prefs.activarConHonor(this)) {
+                EscuchaService.detener(this);
+                ui.postDelayed(() -> EscuchaService.iniciar(this), 800);
+            }
+        });
+
         checkHonor = findViewById(R.id.checkHonor);
         estadoHonor = findViewById(R.id.estadoHonor);
         checkHonor.setChecked(Prefs.activarConHonor(this));
@@ -132,7 +149,7 @@ public class SettingsActivity extends Activity {
         findViewById(R.id.botonProbarIa).setOnClickListener(v -> probarIa());
         findViewById(R.id.botonInicioAuto).setOnClickListener(v -> abrirInicioAutomatico(this));
         findViewById(R.id.botonBateria).setOnClickListener(v -> pedirSinOptimizacion(this));
-        findViewById(R.id.botonNotificaciones).setOnClickListener(v -> abrirNotificaciones(this));
+        findViewById(R.id.botonNotificaciones).setOnClickListener(v -> Permisos.abrirAjustesDeAvisos(this));
         Button exactas = findViewById(R.id.botonExactas);
         exactas.setOnClickListener(v -> abrirAlarmasExactas(this));
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) exactas.setVisibility(android.view.View.GONE);
@@ -275,15 +292,15 @@ public class SettingsActivity extends Activity {
     }
 
     private void actualizarEstado() {
-        PowerManager pm = getSystemService(PowerManager.class);
-        boolean sinOpt = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
-        boolean notif = Build.VERSION.SDK_INT < 33
-                || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        String s = (notif ? "✔" : "✘") + " Notificaciones\n"
+        boolean notif = Permisos.notificaciones(this);
+        String s = (notif ? "✔" : "✘") + " Notificaciones permitidas\n"
+                + (notif && Permisos.avisosEmergentes(this) ? "✔" : "✘") + " Avisos emergentes (banners)\n"
+                + (Permisos.mostrarEnPantalla(this) ? "✔" : "✘") + " Mostrar el recordatorio en pantalla\n"
                 + (Alarmas.puedeExactas(this) ? "✔" : "✘") + " Alarmas exactas\n"
-                + (sinOpt ? "✔" : "✘") + " Sin optimización de batería\n"
-                + (Settings.canDrawOverlays(this) ? "✔" : "✘") + " Mostrar el recordatorio en pantalla\n"
-                + "• Inicio automático (Honor): revísalo con el botón de abajo";
+                + (Permisos.sinOptimizacionBateria(this) ? "✔" : "✘") + " Sin optimización de batería\n"
+                + (Permisos.microfono(this) ? "✔" : "✘") + " Micrófono\n"
+                + "• Inicio automático (Honor): revísalo con el botón de abajo\n"
+                + "• En «Ajustes de notificaciones», activa también «Pantalla de bloqueo: mostrar»";
         estadoPermisos.setText(s);
     }
 

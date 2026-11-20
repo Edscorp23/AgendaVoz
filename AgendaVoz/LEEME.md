@@ -100,6 +100,15 @@ Con esta opción, el teléfono escucha la palabra **«Honor»** todo el tiempo, 
 - Si reinicias el teléfono, Android no deja que el micrófono arranque solo: aparece un aviso «Activa «Honor»»; tócalo una vez.
 - La orden después de «Honor» la entiende el dictado de Google: con internet funciona mejor; sin internet necesitas el español descargado en la app de Google.
 
+## Novedades de la versión 1.5
+
+- **Recordatorios repetidos:** «Recuérdame tomar agua todos los días a las 10», «reunión de equipo todos los lunes a las 9», «gimnasio lunes, miércoles y viernes a las 7 de la noche», «de lunes a viernes a las 7». Al tocar **Hecho**, se programa sola la próxima vez. En la lista, toca uno y elige **Dejar de repetir** para que no vuelva.
+- **Resumen de la mañana:** a las **7:00 a.m.** te dice en voz alta tus pendientes del día (si no tienes nada, no dice nada). Se activa o desactiva en Ajustes.
+- **«Honor» descansa de noche:** no escucha de **11 p.m. a 6 a.m.** y vuelve solo. Se cambia en Ajustes.
+- **Botones siempre a mano:** si hay un recordatorio sonando, al abrir la app aparece arriba **«Hay un recordatorio sonando»**: tócalo para ir a Hecho / Posponer. Si falta algún permiso, aparece un aviso rojo que te lleva a arreglarlo.
+- **Música en Spotify:** «Honor, pon música de Los Prisioneros», «pon Bad Bunny en Spotify», «Honor, pausa la música». Con Spotify gratis suena en aleatorio.
+- **Radios:** toca **Radios** (arriba en la pantalla principal), busca por nombre o agrega con enlace, y luego di «Honor, pon radio Moda» o «Honor, para la radio». Suena con el teléfono bloqueado y baja el volumen cuando habla un recordatorio.
+
 ## Leer lo que agregas con Alexa
 
 Amazon no deja que otras apps lean los **recordatorios** de Alexa («Alexa, recuérdame…»). Pero Alexa sí puede guardar **eventos en tu Google Calendar**, y Agenda Voz lee ese calendario:

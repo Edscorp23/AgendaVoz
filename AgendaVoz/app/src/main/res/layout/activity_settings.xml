@@ -66,6 +66,14 @@
             android:text="Escuchar un recordatorio de prueba ahora" />
 
         <CheckBox
+            android:id="@+id/checkResumen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Resumen hablado de mis pendientes a las 7:00 a.m."
+            android:textColor="@color/texto" />
+
+        <CheckBox
             android:id="@+id/checkEscuchar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -88,6 +96,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="Activar con la palabra «Honor»"
+            android:textColor="@color/texto" />
+
+        <CheckBox
+            android:id="@+id/checkHonorNoche"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Descansar de noche (no escuchar de 11 p.m. a 6 a.m.)"
             android:textColor="@color/texto" />
 
         <TextView
@@ -238,7 +254,7 @@
         <Button
             android:id="@+id/botonNotificaciones"
             style="@style/BotonSecundario"
-            android:text="Ajustes de notificaciones" />
+            android:text="Ajustes de notificaciones (avisos emergentes y pantalla de bloqueo)" />
 
         <Button
             android:id="@+id/botonExactas"

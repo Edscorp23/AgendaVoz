@@ -14,6 +14,7 @@ public class BootReceiver extends BroadcastReceiver {
                 Alarmas.crearCanal(ctx);
                 Alarmas.reprogramarTodo(ctx);
                 Calendario.programarRevision(ctx);
+                Resumen.programar(ctx);
                 Calendario.sincronizar(ctx);
                 if (Prefs.activarConHonor(ctx)) avisarActivarHonor(ctx);
             } finally {
