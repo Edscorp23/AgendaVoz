@@ -26,6 +26,17 @@ jobs:
           ls "$ANDROID_HOME/platforms" || true
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Descargar el modelo de voz en español (Vosk, para «Honor»)
+        run: |
+          curl -L --fail --retry 3 -o /tmp/modelo.zip https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
+          rm -rf /tmp/modelo && mkdir -p /tmp/modelo && unzip -q /tmp/modelo.zip -d /tmp/modelo
+          carpeta=$(find /tmp/modelo -mindepth 1 -maxdepth 1 -type d | head -1)
+          mkdir -p app/src/main/assets
+          rm -rf app/src/main/assets/model-es
+          mv "$carpeta" app/src/main/assets/model-es
+          cat /proc/sys/kernel/random/uuid > app/src/main/assets/model-es/uuid
+          ls app/src/main/assets/model-es
+
       - name: Compilar la APK
         run: |
           chmod +x gradlew
