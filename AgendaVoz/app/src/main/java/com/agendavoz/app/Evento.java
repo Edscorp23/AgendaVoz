@@ -17,6 +17,11 @@ public class Evento {
     public int avisoMin = 10;
     public boolean hecho;
     public long pospuesto;              // si se pospuso: nuevo momento del aviso (epoch ms), 0 si no
+    public String calendarioId;         // si vino del calendario del teléfono: clave del evento; null si no
+
+    public boolean delCalendario() {
+        return calendarioId != null && !calendarioId.isEmpty();
+    }
 
     public LocalDateTime fechaHora() {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(cuando), ZoneId.systemDefault());

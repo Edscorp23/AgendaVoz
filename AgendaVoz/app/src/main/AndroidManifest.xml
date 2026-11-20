@@ -16,6 +16,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Escuchar «finaliza» / «pospón» mientras suena el recordatorio -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Leer el calendario del teléfono (Google Calendar, donde Alexa puede agregar eventos) -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <!-- Android 11+: declarar qué servicios externos usamos (dictado y voz) -->
     <queries>
@@ -24,6 +30,9 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 
@@ -66,12 +75,22 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- Escucha la palabra «Honor» con la pantalla bloqueada (Vosk, sin internet) -->
+        <service
+            android:name=".EscuchaService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
 
         <receiver
             android:name=".AccionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".CalendarioReceiver"
             android:exported="false" />
 
         <receiver

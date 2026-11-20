@@ -71,6 +71,47 @@ Si no respondes, insiste unos minutos y luego se pospone sola y vuelve a avisart
 
 El aviso previo (por ejemplo, 10 minutos antes) se dice **una sola vez**.
 
+### Responder sin tocar el teléfono
+
+Mientras la pantalla del recordatorio está abierta, entre una repetición y otra **la app escucha**. Puedes decir:
+
+- «**Honor, finaliza el recordatorio**», «finaliza», «listo», «ya lo hice» → lo marca como hecho.
+- «**Honor, pospón**» → lo pospone 10 minutos. «Pospón 20 minutos», «en media hora», «en una hora».
+- «**Silencio**» → deja de hablar, pero queda pendiente.
+
+La app confirma en voz alta («Listo, recordatorio finalizado»). Necesita el permiso de **micrófono** y la opción activada en Ajustes. «Honor» es opcional: basta con decir la orden. El asistente propio del teléfono (YOYO) no participa.
+
+## Activar diciendo «Honor» (como «Alexa»)
+
+Con esta opción, el teléfono escucha la palabra **«Honor»** todo el tiempo, también con la **pantalla bloqueada** y **sin internet**. Usa Vosk, un reconocedor gratuito que funciona dentro del teléfono; el modelo de voz en español (unos 40 MB) se agrega automáticamente al compilar en GitHub.
+
+**Cómo se usa:** di «**Honor**», espera la **vibración** (la app dice «¿Sí? Te escucho») y luego di la orden: «reunión con Carlos mañana a las 3 de la tarde». Al terminar, la pantalla vuelve a bloquearse sola.
+
+**Para activarlo:**
+1. Ajustes › **Activar con la palabra «Honor»** (acepta el permiso del micrófono).
+2. Ajustes › **Permitir que el recordatorio aparezca en pantalla** (sin esto la app no puede abrirse sola sobre el bloqueo).
+3. Asegúrate de haber hecho lo de batería (Inicio de aplicaciones) para que Honor no lo cierre.
+
+**Ten en cuenta:**
+- Aparece una **notificación fija** «Di «Honor» para hablarme»: Android la exige para usar el micrófono en segundo plano.
+- Gasta **más batería** que el resto de la app, porque el micrófono está siempre encendido.
+- Puede activarse por error con palabras parecidas, o no oírte si hay mucho ruido. Habla claro y haz una pausa después de «Honor».
+- Mientras Agenda Voz está abierta en pantalla, «Honor» queda en pausa (no hace falta).
+- Si reinicias el teléfono, Android no deja que el micrófono arranque solo: aparece un aviso «Activa «Honor»»; tócalo una vez.
+- La orden después de «Honor» la entiende el dictado de Google: con internet funciona mejor; sin internet necesitas el español descargado en la app de Google.
+
+## Leer lo que agregas con Alexa
+
+Amazon no deja que otras apps lean los **recordatorios** de Alexa («Alexa, recuérdame…»). Pero Alexa sí puede guardar **eventos en tu Google Calendar**, y Agenda Voz lee ese calendario:
+
+1. En la app **Alexa**: **Más › Configuración › Calendario y correo electrónico › Agregar cuenta › Google**. Entra con la misma cuenta de Google de tu Honor.
+2. En esa pantalla, elige ese calendario como el predeterminado para los eventos nuevos.
+3. En Agenda Voz: **Ajustes › Leer eventos del calendario del teléfono** (acepta el permiso).
+4. Ahora dile a Alexa: «**Alexa, agrega al calendario** reunión con Carlos mañana a las 3». En unos minutos aparece en Agenda Voz con «· del calendario» y te lo recuerda hablando.
+
+La app revisa el calendario al abrirla y cada media hora. Si borras en Agenda Voz un evento del calendario, no vuelve a importarse.
+
+
 La voz usa el volumen de **alarma** del teléfono. Si no se oye, sube ese volumen. Si el teléfono no tiene voz en español instalada, la app usa el timbre de alarma como respaldo: instala la voz en *Ajustes del teléfono › Accesibilidad › Salida de texto a voz*.
 
 ## 5. IA gratuita (opcional, con internet)

@@ -21,7 +21,6 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 
 import java.time.LocalDate;
-import java.util.Locale;
 
 /**
  * Dice el recordatorio en voz alta y lo repite cada cierto tiempo
@@ -32,6 +31,12 @@ public class RecordatorioService extends Service {
     public static final String ACCION_INICIAR = "com.agendavoz.app.VOZ_INICIAR";
     public static final String ACCION_PAUSAR = "com.agendavoz.app.VOZ_PAUSAR";
     public static final String ACCION_CERRAR_PANTALLA = "com.agendavoz.app.CERRAR_ALARMA";
+    /** Avisos a la pantalla del recordatorio para que escuche solo cuando la app no está hablando. */
+    public static final String ACCION_HABLANDO = "com.agendavoz.app.VOZ_HABLANDO";
+    public static final String ACCION_CALLADO = "com.agendavoz.app.VOZ_CALLADO";
+
+    /** true mientras la app está diciendo el recordatorio en voz alta. */
+    public static volatile boolean hablando = false;
 
     private static final int ID_PRIMER_PLANO = 4242;
     private static final long NINGUNO = Long.MIN_VALUE;
@@ -67,6 +72,8 @@ public class RecordatorioService extends Service {
     public void onCreate() {
         super.onCreate();
         Alarmas.crearCanal(this);
+        // El micrófono lo necesita la pantalla del recordatorio: «Honor» espera.
+        EscuchaService.pausar(this, EscuchaService.MOTIVO_RECORDATORIO);
         audio = getSystemService(AudioManager.class);
         PowerManager pm = getSystemService(PowerManager.class);
         if (pm != null) {
@@ -74,13 +81,9 @@ public class RecordatorioService extends Service {
             wakeLock.setReferenceCounted(false);
             wakeLock.acquire(30 * 60_000L);
         }
-        tts = new TextToSpeech(this, status -> {
+        tts = Voz.crear(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
-                int r = tts.setLanguage(Locale.forLanguageTag(Prefs.idioma(this)));
-                if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    r = tts.setLanguage(Locale.forLanguageTag("es"));
-                }
-                ttsListo = r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED;
+                ttsListo = Voz.ponerEspanol(this, tts);
                 if (ttsListo) {
                     tts.setAudioAttributes(atributos);
                     tts.setSpeechRate(0.95f);
@@ -108,14 +111,14 @@ public class RecordatorioService extends Service {
                 decir();
             }
         });
-        // Si la voz no responde en 6 segundos, se usa el timbre de alarma como respaldo.
+        // Si la voz no responde en 12 segundos, se usa el timbre de alarma como respaldo.
         h.postDelayed(() -> {
             if (!ttsListo && arrancarAlEstarListo) {
                 ttsFallo = true;
                 arrancarAlEstarListo = false;
                 decir();
             }
-        }, 6000);
+        }, 12000);
     }
 
     @Override
@@ -163,6 +166,7 @@ public class RecordatorioService extends Service {
             startForeground(ID_PRIMER_PLANO, n);
         }
         if (wakeLock != null) wakeLock.acquire(30 * 60_000L);
+        if (!esPrevio) abrirPantalla();
 
         if (ttsListo || ttsFallo) decir();
         else arrancarAlEstarListo = true;
@@ -181,6 +185,7 @@ public class RecordatorioService extends Service {
         }
         String texto = texto();
         vecesDicho++;
+        avisar(true);
         pedirFoco();
         if (ttsListo) {
             tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, "REC_" + System.nanoTime());
@@ -191,6 +196,7 @@ public class RecordatorioService extends Service {
 
     private void terminoDeHablar() {
         soltarFoco();
+        avisar(false);
         if (idActual == NINGUNO) return;
         if (esPrevio) {
             // El aviso previo se dice una sola vez y queda como notificación normal.
@@ -279,7 +285,16 @@ public class RecordatorioService extends Service {
         }, 4000);
     }
 
+    /** Avisa a la pantalla del recordatorio si la app empieza o termina de hablar. */
+    private void avisar(boolean empiezaAHablar) {
+        hablando = empiezaAHablar;
+        Intent i = new Intent(empiezaAHablar ? ACCION_HABLANDO : ACCION_CALLADO);
+        i.setPackage(getPackageName());
+        sendBroadcast(i);
+    }
+
     private void callar() {
+        if (hablando) avisar(false);
         if (tts != null && ttsListo) tts.stop();
         if (timbre != null && timbre.isPlaying()) timbre.stop();
         soltarFoco();
@@ -301,33 +316,65 @@ public class RecordatorioService extends Service {
         if (audio != null && foco != null) audio.abandonAudioFocusRequest(foco);
     }
 
+    // ---------------------------------------------------------------- pantalla completa
+
+    /**
+     * Si la app tiene el permiso "Mostrar sobre otras apps", abre la pantalla del recordatorio directamente
+     * (más fiable en Honor que solo la notificación de pantalla completa).
+     */
+    private void abrirPantalla() {
+        if (!android.provider.Settings.canDrawOverlays(this)) return;
+        try {
+            startActivity(intentPantalla());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Intent intentPantalla() {
+        Intent pantalla = new Intent(this, AlarmaActivity.class);
+        pantalla.putExtra(Alarmas.EXTRA_ID, idActual);
+        pantalla.putExtra(Alarmas.EXTRA_REAVISOS, reavisos);
+        pantalla.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+        return pantalla;
+    }
+
     // ---------------------------------------------------------------- notificación
 
     private Notification notificacionPrimerPlano() {
         String titulo = Acciones.nombre(this, idActual);
         String texto;
-        if (esPrevio) {
-            texto = "Aviso previo";
-        } else if (idActual == Alarmas.ID_PRUEBA) {
+        String completo;
+        if (idActual == Alarmas.ID_PRUEBA) {
             texto = "Prueba del recordatorio hablado";
+            completo = texto + "\nToca Hecho para terminar.";
         } else {
             Evento e = DbHelper.get(this).obtener(idActual);
-            texto = e == null ? "Recordatorio" : (e.esReunion() ? "Reunión" : "Tarea") + " · "
-                    + Formato.hora(e.fechaHora().toLocalTime())
-                    + (e.participantes.isEmpty() ? "" : " · con " + e.participantes);
+            if (e == null) {
+                texto = "Recordatorio";
+                completo = texto;
+            } else {
+                String cuando = Formato.capitalizar(Formato.fechaHablada(e.fechaHora().toLocalDate(), LocalDate.now()))
+                        + " a las " + Formato.hora(e.fechaHora().toLocalTime());
+                texto = (e.esReunion() ? "Reunión" : "Tarea") + " · " + cuando;
+                StringBuilder sb = new StringBuilder();
+                if (esPrevio) sb.append("Empieza en ").append(e.avisoMin).append(" minutos\n");
+                sb.append(e.esReunion() ? "Reunión: " : "Tarea: ").append(e.titulo).append('\n');
+                sb.append(cuando);
+                if (!e.participantes.isEmpty()) sb.append("\nCon: ").append(e.participantes);
+                if (!esPrevio) sb.append("\n\nToca Hecho cuando termines, o Posponer.");
+                completo = sb.toString();
+            }
         }
 
-        Intent pantalla = new Intent(this, AlarmaActivity.class);
-        pantalla.putExtra(Alarmas.EXTRA_ID, idActual);
-        pantalla.putExtra(Alarmas.EXTRA_REAVISOS, reavisos);
-        pantalla.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
-        PendingIntent pi = PendingIntent.getActivity(this, 3, pantalla,
+        PendingIntent pi = PendingIntent.getActivity(this, 3, intentPantalla(),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Notification.Builder b = new Notification.Builder(this, Alarmas.CANAL)
                 .setSmallIcon(R.drawable.ic_notificacion)
                 .setContentTitle(titulo)
                 .setContentText(texto)
+                .setStyle(new Notification.BigTextStyle().bigText(completo))
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setOngoing(true)
                 .setContentIntent(pi);
@@ -354,6 +401,7 @@ public class RecordatorioService extends Service {
         Intent cerrar = new Intent(ACCION_CERRAR_PANTALLA);
         cerrar.setPackage(getPackageName());
         sendBroadcast(cerrar);
+        EscuchaService.reanudar(this, EscuchaService.MOTIVO_RECORDATORIO);
         super.onDestroy();
     }
 

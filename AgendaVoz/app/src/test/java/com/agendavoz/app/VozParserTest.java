@@ -113,5 +113,9 @@ public class VozParserTest {
         assertEquals(10, p.interpretarRespuestaRecordatorio("ahora no, más tarde"));
         assertEquals(VozParser.RESP_SILENCIAR, p.interpretarRespuestaRecordatorio("silencio"));
         assertEquals(VozParser.RESP_NO_ENTENDIDA, p.interpretarRespuestaRecordatorio("banana"));
+        assertEquals(VozParser.RESP_HECHO, p.interpretarRespuestaRecordatorio("Honor finaliza con recordatorio"));
+        assertEquals(VozParser.RESP_HECHO, p.interpretarRespuestaRecordatorio("Honor, finalizar el recordatorio"));
+        assertEquals(10, p.interpretarRespuestaRecordatorio("Honor pospón"));
+        assertEquals(20, p.interpretarRespuestaRecordatorio("Honor pospón 20 minutos"));
     }
 }

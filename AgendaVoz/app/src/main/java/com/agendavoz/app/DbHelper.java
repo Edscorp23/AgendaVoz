@@ -13,7 +13,7 @@ import java.util.List;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB = "agenda.db";
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
     private static final String T = "eventos";
 
     private static DbHelper instancia;
@@ -37,7 +37,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 + "cuando INTEGER NOT NULL,"
                 + "aviso_min INTEGER NOT NULL DEFAULT 10,"
                 + "hecho INTEGER NOT NULL DEFAULT 0,"
-                + "pospuesto INTEGER NOT NULL DEFAULT 0)");
+                + "pospuesto INTEGER NOT NULL DEFAULT 0,"
+                + "calendario_id TEXT)");
         db.execSQL("CREATE INDEX idx_cuando ON " + T + "(cuando)");
     }
 
@@ -45,6 +46,9 @@ public class DbHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldV, int newV) {
         if (oldV < 2) {
             db.execSQL("ALTER TABLE " + T + " ADD COLUMN pospuesto INTEGER NOT NULL DEFAULT 0");
+        }
+        if (oldV < 3) {
+            db.execSQL("ALTER TABLE " + T + " ADD COLUMN calendario_id TEXT");
         }
     }
 
@@ -57,6 +61,7 @@ public class DbHelper extends SQLiteOpenHelper {
         cv.put("aviso_min", e.avisoMin);
         cv.put("hecho", e.hecho ? 1 : 0);
         cv.put("pospuesto", e.pospuesto);
+        cv.put("calendario_id", e.calendarioId);
         return cv;
     }
 
@@ -95,6 +100,18 @@ public class DbHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(ini), String.valueOf(fin)}, "cuando ASC");
     }
 
+    /** Evento importado del calendario con esa clave (o null). */
+    public Evento porCalendarioId(String clave) {
+        List<Evento> l = consulta("calendario_id=?", new String[]{clave}, null);
+        return l.isEmpty() ? null : l.get(0);
+    }
+
+    /** Eventos importados del calendario, pendientes y futuros (para detectar los que se borraron o movieron). */
+    public List<Evento> importadosFuturos(long desde) {
+        return consulta("calendario_id IS NOT NULL AND hecho=0 AND cuando>=?",
+                new String[]{String.valueOf(desde)}, "cuando ASC");
+    }
+
     public List<Evento> completados() {
         return consulta("hecho=1", null, "cuando DESC");
     }
@@ -114,6 +131,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 e.avisoMin = c.getInt(c.getColumnIndexOrThrow("aviso_min"));
                 e.hecho = c.getInt(c.getColumnIndexOrThrow("hecho")) == 1;
                 e.pospuesto = c.getLong(c.getColumnIndexOrThrow("pospuesto"));
+                e.calendarioId = c.getString(c.getColumnIndexOrThrow("calendario_id"));
                 lista.add(e);
             }
         } finally {

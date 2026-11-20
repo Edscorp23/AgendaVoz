@@ -49,6 +49,43 @@ public final class Prefs {
         return Math.max(0, sp(c).getInt("reavisar_min", 10));
     }
 
+    /** Escuchar la palabra «Honor» todo el tiempo, también con la pantalla bloqueada. */
+    public static boolean activarConHonor(Context c) {
+        return sp(c).getBoolean("activar_honor", false);
+    }
+
+    public static void guardarActivarConHonor(Context c, boolean si) {
+        sp(c).edit().putBoolean("activar_honor", si).apply();
+    }
+
+    /** Si la pantalla del recordatorio escucha sola órdenes como «finaliza» o «pospón». */
+    public static boolean escucharRespuestas(Context c) {
+        return sp(c).getBoolean("escuchar_respuestas", true);
+    }
+
+    public static void guardarEscucharRespuestas(Context c, boolean si) {
+        sp(c).edit().putBoolean("escuchar_respuestas", si).apply();
+    }
+
+    /** Leer eventos del calendario del teléfono (Google, y lo que se agrega con Alexa). */
+    public static boolean leerCalendario(Context c) {
+        return sp(c).getBoolean("leer_calendario", false);
+    }
+
+    public static void guardarLeerCalendario(Context c, boolean si) {
+        sp(c).edit().putBoolean("leer_calendario", si).apply();
+    }
+
+    public static java.util.Set<String> calendarioIgnorados(Context c) {
+        return new java.util.HashSet<>(sp(c).getStringSet("calendario_ignorados", new java.util.HashSet<>()));
+    }
+
+    public static void ignorarDelCalendario(Context c, String clave) {
+        java.util.Set<String> s = calendarioIgnorados(c);
+        s.add(clave);
+        sp(c).edit().putStringSet("calendario_ignorados", s).apply();
+    }
+
     public static void guardarRecordatorio(Context c, int repetirSeg, int insistirMin, int reavisarMin) {
         sp(c).edit()
                 .putInt("repetir_seg", Math.max(10, repetirSeg))

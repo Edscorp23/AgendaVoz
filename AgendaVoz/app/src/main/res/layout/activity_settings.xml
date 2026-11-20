@@ -15,6 +15,10 @@
             style="@style/Titulo"
             android:text="Ajustes" />
 
+        <TextView
+            android:id="@+id/versionApp"
+            style="@style/Ayuda" />
+
         <!-- Recordatorios -->
         <TextView
             style="@style/Seccion"
@@ -60,6 +64,86 @@
             android:id="@+id/botonProbarVoz"
             style="@style/BotonSecundario"
             android:text="Escuchar un recordatorio de prueba ahora" />
+
+        <CheckBox
+            android:id="@+id/checkEscuchar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Escuchar «Honor, finaliza» o «pospón» cuando suena un recordatorio"
+            android:textColor="@color/texto" />
+
+        <!-- Palabra de activación -->
+        <TextView
+            style="@style/Seccion"
+            android:text="ACTIVAR DICIENDO «HONOR»" />
+
+        <TextView
+            style="@style/Ayuda"
+            android:text="El teléfono escucha la palabra «Honor» todo el tiempo, también con la pantalla bloqueada y sin internet. Di «Honor», espera la vibración y di la orden: «reunión con Carlos mañana a las 3». Usa más batería y deja una notificación fija." />
+
+        <CheckBox
+            android:id="@+id/checkHonor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Activar con la palabra «Honor»"
+            android:textColor="@color/texto" />
+
+        <TextView
+            android:id="@+id/estadoHonor"
+            style="@style/Ayuda"
+            android:textColor="@color/texto" />
+
+        <!-- Calendario / Alexa -->
+        <TextView
+            style="@style/Seccion"
+            android:text="CALENDARIO (GOOGLE Y ALEXA)" />
+
+        <TextView
+            style="@style/Ayuda"
+            android:text="Lee los eventos de los próximos 14 días del calendario de este teléfono y te los recuerda hablando. Si vinculas Alexa con tu Google Calendar, lo que agregues diciendo «Alexa, agrega al calendario…» también llega aquí." />
+
+        <CheckBox
+            android:id="@+id/checkCalendario"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Leer eventos del calendario del teléfono"
+            android:textColor="@color/texto" />
+
+        <Button
+            android:id="@+id/botonSincronizar"
+            style="@style/BotonSecundario"
+            android:text="Revisar el calendario ahora" />
+
+        <TextView
+            android:id="@+id/estadoCalendario"
+            style="@style/Ayuda" />
+
+        <TextView
+            style="@style/Seccion"
+            android:text="VOZ EN ESPAÑOL" />
+
+        <TextView
+            android:id="@+id/estadoVoz"
+            style="@style/Ayuda"
+            android:textColor="@color/texto" />
+
+        <Button
+            android:id="@+id/botonMotorGoogle"
+            style="@style/BotonPrincipal"
+            android:text="Instalar «Servicios de voz de Google»" />
+
+        <Button
+            android:id="@+id/botonInstalarVoz"
+            style="@style/BotonSecundario"
+            android:text="Descargar la voz en español" />
+
+        <Button
+            android:id="@+id/botonAjustesVoz"
+            style="@style/BotonSecundario"
+            android:text="Ajustes de voz del teléfono" />
 
         <TextView
             style="@style/Etiqueta"
@@ -140,6 +224,11 @@
             android:id="@+id/botonInicioAuto"
             style="@style/BotonSecundario"
             android:text="Abrir «Inicio de aplicaciones» (Honor)" />
+
+        <Button
+            android:id="@+id/botonSobreApps"
+            style="@style/BotonSecundario"
+            android:text="Permitir que el recordatorio aparezca en pantalla" />
 
         <Button
             android:id="@+id/botonBateria"

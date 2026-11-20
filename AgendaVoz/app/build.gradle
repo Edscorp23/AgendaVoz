@@ -10,13 +10,28 @@ android {
         applicationId 'com.agendavoz.app'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        versionCode 5
+        versionName '1.4'
+    }
+
+    // Firma fija: así cada APK nueva se instala ENCIMA de la anterior sin borrar tus datos.
+    signingConfigs {
+        fija {
+            storeFile file('agendavoz-firma.jks')
+            storeType 'pkcs12'
+            storePassword 'agendavoz'
+            keyAlias 'agendavoz'
+            keyPassword 'agendavoz'
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.fija
+        }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.fija
         }
     }
 
@@ -33,6 +48,10 @@ android {
 }
 
 dependencies {
-    // La app no usa librerías externas: solo Android. JUnit es solo para las pruebas del intérprete.
+    // Vosk: reconocimiento de voz sin internet, para escuchar la palabra «Honor».
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
+    implementation 'com.alphacephei:vosk-android:0.3.47@aar'
+
+    // JUnit es solo para las pruebas del intérprete.
     testImplementation 'junit:junit:4.13.2'
 }

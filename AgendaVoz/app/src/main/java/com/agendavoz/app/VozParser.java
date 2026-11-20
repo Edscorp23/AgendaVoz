@@ -426,7 +426,7 @@ public class VozParser {
     public int interpretarRespuestaRecordatorio(String respuesta) {
         String n = " " + normalizar(respuesta == null ? "" : respuesta).trim().replaceAll("\\s+", " ") + " ";
         boolean pospone = n.matches(".*\\b(?:pospon\\w*|despues|luego|mas tarde|recuerdame|en un rato|ahorita no|ahora no|todavia no|aun no|dentro de|en \\d+|en (?:cinco|diez|quince|veinte|treinta|media|una))\\b.*");
-        if (!pospone && n.matches(".*\\b(?:hecho|hecha|listo|lista|ya (?:lo|la) hice|ya esta|ya termine|termine|terminado|terminada|completado|completada|realizado|realizada|cumplido|cumplida|ok ya|ya)\\b.*")) {
+        if (!pospone && n.matches(".*\\b(?:hecho|hecha|listo|lista|ya (?:lo|la) hice|ya esta|ya termine|termine|terminado|terminada|termina|terminar|terminalo|finaliza|finalizar|finalizado|finalizada|finalizalo|finalizala|completado|completada|completar|completa|realizado|realizada|cumplido|cumplida|apaga|apagar|ok ya|ya)\\b.*")) {
             return RESP_HECHO;
         }
         if (n.matches(".*\\b(?:silencio|silenciar|silencia|callate|calla|para de hablar|deja de hablar|basta)\\b.*")) {

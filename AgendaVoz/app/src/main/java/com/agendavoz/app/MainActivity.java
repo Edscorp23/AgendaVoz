@@ -12,13 +12,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
@@ -75,6 +78,19 @@ public class MainActivity extends Activity {
     private AlertDialog dialogoActual;
     private boolean verCompletados = false;
     private boolean enPrimerPlano = false;
+
+    // Escucha integrada (sin la ventana de Google): funciona también sobre la pantalla bloqueada
+    private SpeechRecognizer oidoApp;
+    private boolean oyendo = false;
+    // Se abrió porque dijiste «Honor»
+    private boolean despertadoPendiente = false;
+    private boolean modoDespertar = false;
+    private final Runnable cerrarSiInactivo = () -> {
+        if (modoDespertar && estado == NORMAL && !oyendo && dialogoActual == null) {
+            modoDespertar = false;
+            moveTaskToBack(true);
+        }
+    };
     private int intentosConfirmacion = 0;
 
     private TextView textoEstado, textoOido, tituloLista, vacio;
@@ -127,6 +143,8 @@ public class MainActivity extends Activity {
         Alarmas.crearCanal(this);
         iniciarVoz();
         pedirPermisos();
+        revisarDespertar(getIntent());
+        EscuchaService.iniciar(this);
         if (!Prefs.configuracionInicialHecha(this)) mostrarConfiguracionInicial();
     }
 
@@ -134,18 +152,83 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         enPrimerPlano = true;
+        EscuchaService.pausar(this, EscuchaService.MOTIVO_APP);
         refrescar();
+        if (despertadoPendiente) {
+            despertadoPendiente = false;
+            modoDespertar = true;
+            estado = NORMAL;
+            hablar("¿Sí? Te escucho.", true);
+        }
+        if (Prefs.leerCalendario(this)) {
+            fondo.execute(() -> {
+                int nuevos = Calendario.sincronizar(this);
+                ui.post(() -> {
+                    refrescar();
+                    if (nuevos > 0) {
+                        Toast.makeText(this, nuevos == 1 ? "1 evento nuevo del calendario"
+                                : nuevos + " eventos nuevos del calendario", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
+        }
     }
 
     @Override
     protected void onPause() {
         enPrimerPlano = false;
+        if (oyendo && oidoApp != null) {
+            try {
+                oidoApp.cancel();
+            } catch (Exception ignored) {
+            }
+            oyendo = false;
+        }
+        ui.removeCallbacks(cerrarSiInactivo);
+        if (modoDespertar && !hasWindowFocus()) mostrarSobreBloqueo(false);
+        EscuchaService.reanudar(this, EscuchaService.MOTIVO_APP);
         super.onPause();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        revisarDespertar(intent);
+    }
+
+    /** Si la app se abrió porque dijiste «Honor», se muestra sobre la pantalla bloqueada y escucha. */
+    private void revisarDespertar(Intent intent) {
+        if (intent != null && intent.getBooleanExtra(EscuchaService.EXTRA_DESPERTAR, false)) {
+            intent.removeExtra(EscuchaService.EXTRA_DESPERTAR);
+            mostrarSobreBloqueo(true);
+            despertadoPendiente = true;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void mostrarSobreBloqueo(boolean si) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(si);
+            setTurnScreenOn(si);
+        } else if (si) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        }
     }
 
     @Override
     protected void onDestroy() {
         cerrarDialogo();
+        if (oidoApp != null) {
+            try {
+                oidoApp.destroy();
+            } catch (Exception ignored) {
+            }
+        }
         if (tts != null) {
             tts.stop();
             tts.shutdown();
@@ -157,14 +240,9 @@ public class MainActivity extends Activity {
     // ================================================================= voz: entrada y salida
 
     private void iniciarVoz() {
-        tts = new TextToSpeech(this, status -> {
+        tts = Voz.crear(this, status -> {
             if (status != TextToSpeech.SUCCESS) return;
-            Locale loc = Locale.forLanguageTag(Prefs.idioma(this));
-            int r = tts.setLanguage(loc);
-            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-                r = tts.setLanguage(Locale.forLanguageTag("es"));
-            }
-            ttsListo = r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED;
+            ttsListo = Voz.ponerEspanol(this, tts);
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override
                 public void onStart(String id) {
@@ -187,6 +265,8 @@ public class MainActivity extends Activity {
     /** Muestra y dice un texto. Si luegoEscuchar es true, abre el micrófono al terminar de hablar. */
     private void hablar(String texto, boolean luegoEscuchar) {
         textoEstado.setText(texto);
+        ui.removeCallbacks(cerrarSiInactivo);
+        if (modoDespertar && !luegoEscuchar && estado == NORMAL) ui.postDelayed(cerrarSiInactivo, 9000);
         if (ttsListo) {
             String id = (luegoEscuchar ? "ESCUCHAR_" : "DECIR_") + System.nanoTime();
             tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, id);
@@ -203,6 +283,11 @@ public class MainActivity extends Activity {
     private void escuchar() {
         if (isFinishing()) return;
         if (tts != null) tts.stop();
+        ui.removeCallbacks(cerrarSiInactivo);
+        if (puedeOirSinDialogo()) {
+            escucharSinDialogo();
+            return;
+        }
         Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Prefs.idioma(this));
@@ -215,6 +300,101 @@ public class MainActivity extends Activity {
                     + "o escribe la orden en la caja de texto.", Toast.LENGTH_LONG).show();
             entrada.requestFocus();
         }
+    }
+
+    private boolean puedeOirSinDialogo() {
+        return checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                && SpeechRecognizer.isRecognitionAvailable(this);
+    }
+
+    /** Escucha con el reconocedor integrado: no abre ventanas, así funciona sobre la pantalla bloqueada. */
+    private void escucharSinDialogo() {
+        if (oyendo) return;
+        try {
+            if (oidoApp == null) {
+                oidoApp = SpeechRecognizer.createSpeechRecognizer(this);
+                oidoApp.setRecognitionListener(new OyenteApp());
+            }
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Prefs.idioma(this));
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            oyendo = true;
+            botonMic.setAlpha(0.55f);
+            textoOido.setText("🎤 " + indicacionSegunEstado());
+            oidoApp.startListening(i);
+        } catch (Exception e) {
+            oyendo = false;
+            botonMic.setAlpha(1f);
+            textoOido.setText("No pude usar el micrófono. Escribe la orden o inténtalo de nuevo.");
+        }
+    }
+
+    private class OyenteApp implements RecognitionListener {
+        @Override
+        public void onResults(Bundle resultados) {
+            oyendo = false;
+            botonMic.setAlpha(1f);
+            ArrayList<String> r = resultados.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            if (r != null && !r.isEmpty() && r.get(0) != null && !r.get(0).trim().isEmpty()) {
+                procesar(r.get(0).trim());
+            } else {
+                noTeOi();
+            }
+        }
+
+        @Override
+        public void onError(int error) {
+            oyendo = false;
+            botonMic.setAlpha(1f);
+            if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                noTeOi();
+            } else if (error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT) {
+                textoOido.setText("Sin conexión para el dictado. Descarga el español sin conexión en la app de Google, o escribe la orden.");
+                if (modoDespertar) ui.postDelayed(cerrarSiInactivo, 9000);
+            } else if (error != SpeechRecognizer.ERROR_CLIENT) {
+                textoOido.setText("No pude escuchar (error " + error + "). Toca el micrófono para intentarlo otra vez.");
+                if (modoDespertar) ui.postDelayed(cerrarSiInactivo, 9000);
+            }
+        }
+
+        @Override
+        public void onReadyForSpeech(Bundle params) {
+        }
+
+        @Override
+        public void onBeginningOfSpeech() {
+        }
+
+        @Override
+        public void onRmsChanged(float rmsdB) {
+        }
+
+        @Override
+        public void onBufferReceived(byte[] buffer) {
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+        }
+
+        @Override
+        public void onPartialResults(Bundle partialResults) {
+        }
+
+        @Override
+        public void onEvent(int eventType, Bundle params) {
+        }
+    }
+
+    private void noTeOi() {
+        if (estado == ESP_FECHA || estado == ESP_HORA || estado == ESP_AMPM
+                || estado == ESP_CONFIRMAR || estado == ESP_CONFIRMAR_BORRAR || estado == ESP_CONFIRMAR_CAMBIO) {
+            textoOido.setText("No te oí. Toca el micrófono para responder.");
+        } else {
+            textoOido.setText("No te oí. Toca el micrófono o di «Honor» otra vez.");
+        }
+        if (modoDespertar) ui.postDelayed(cerrarSiInactivo, 9000);
     }
 
     private String indicacionSegunEstado() {
@@ -548,6 +728,7 @@ public class MainActivity extends Activity {
         if (eventoObjetivo == null) return;
         Alarmas.cancelar(this, eventoObjetivo.id);
         Acciones.quitarAviso(this, eventoObjetivo.id);
+        if (eventoObjetivo.delCalendario()) Prefs.ignorarDelCalendario(this, eventoObjetivo.calendarioId);
         DbHelper.get(this).eliminar(eventoObjetivo.id);
         eventoObjetivo = null;
         refrescar();
@@ -693,6 +874,7 @@ public class MainActivity extends Activity {
                                     .setPositiveButton("Eliminar", (d2, w2) -> {
                                         Alarmas.cancelar(this, e.id);
                                         Acciones.quitarAviso(this, e.id);
+                                        if (e.delCalendario()) Prefs.ignorarDelCalendario(this, e.calendarioId);
                                         db.eliminar(e.id);
                                         refrescar();
                                     })
@@ -774,6 +956,7 @@ public class MainActivity extends Activity {
                 det += " · pospuesta hasta " + Formato.hora(java.time.LocalDateTime.ofInstant(
                         java.time.Instant.ofEpochMilli(e.pospuesto), ZoneId.systemDefault()).toLocalTime());
             }
+            if (e.delCalendario()) det += " · del calendario";
             if (vencida) det += " · vencida";
             if (e.hecho) det += " · hecha";
             detalle.setText(det);
@@ -787,10 +970,16 @@ public class MainActivity extends Activity {
     // ================================================================= permisos y configuración inicial
 
     private void pedirPermisos() {
+        List<String> faltan = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_PERMISOS);
+            faltan.add("android.permission.POST_NOTIFICATIONS");
         }
+        // Micrófono: para decir «Honor, finaliza» o «pospón» cuando suena un recordatorio
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            faltan.add(android.Manifest.permission.RECORD_AUDIO);
+        }
+        if (!faltan.isEmpty()) requestPermissions(faltan.toArray(new String[0]), REQ_PERMISOS);
     }
 
     private void mostrarConfiguracionInicial() {
@@ -801,7 +990,10 @@ public class MainActivity extends Activity {
                         + "1. Toca «Abrir ajustes».\n"
                         + "2. Busca Agenda Voz y desactiva «Gestionar automáticamente».\n"
                         + "3. Activa las 3 opciones (inicio automático, inicio secundario y en segundo plano).\n\n"
-                        + "Después, en Ajustes de esta app, usa «Probar alarma en 1 minuto».")
+                        + "Después, en Ajustes de esta app:\n"
+                        + "• Revisa que diga «✔ Voz en español lista».\n"
+                        + "• Toca «Permitir que el recordatorio aparezca en pantalla».\n"
+                        + "• Prueba con «Escuchar un recordatorio de prueba ahora».")
                 .setPositiveButton("Abrir ajustes", (d, w) -> {
                     Prefs.marcarConfiguracionInicial(this);
                     SettingsActivity.abrirInicioAutomatico(this);
